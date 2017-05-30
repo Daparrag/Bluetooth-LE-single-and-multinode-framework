@@ -33,17 +33,19 @@ typedef struct
 
 
 
+
 /** 
 * @brief ptp service and characteristics handle.
 */
 typedef struct
 {
   uint16_t ServiceHandle;               /*!< Service handle.*/
- 
+  
   uint16_t CharTimeHandle;             /*!< Audio characteristic handle.*/
   
-  
 } ptp_ProfileHandle_t;
+
+
 
 /** 
 * @brief ptp packet structures.

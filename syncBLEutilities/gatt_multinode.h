@@ -38,7 +38,7 @@ typedef struct connection_setup_conf_{
 	uint16_t LE_CI_max;
 	uint16_t LE_CI_min;
 	uint16_t Conn_Latency;
-	uint16_t LE_Timeout_;
+	uint16_t LE_Timeout;
 	uint16_t Conn_Len_Min;
 	uint16_t Conn_Len_Max;
 }CN_setup_conf; /*conf Connection Setup Master to slave*/
@@ -61,11 +61,17 @@ typedef struct gatt_S_conf_{
 
 typedef struct gatt_config_{
 	uint32_t role;
-	app_Master_broadcast_conf M_conf;
-	app_Slave_observer_conf  S_conf;
+	gatt_Master_Broadcast_conf M_conf;
+	gatt_Slave_Observer_conf  S_conf;
 }gatt_conf;
 
-
+MNODE_GATT_Status _GATT_MULT_NODE_SET_DEFAULT_CONFIG(gatt_conf * multinode);
+MNODE_GATT_Status _GATT_MULT_NODE_SET_DEVICE_ADDR(uint8_t offset, uint8_t len,const uint8_t *val);
+MNODE_GATT_Status _GATT_MULT_NODE_DISCOVERY_PROCEDURE(gatt_conf * multinode);
+MNODE_GATT_Status _GATT_MULT_NODE_SETUP_CONNECTION(gatt_conf * multinode, uint32_t peer_addr_type,uint8_t *Peer_Address,uint32_t Own_Address_Type);
+MNODE_GATT_Status _GATT_MULT_NODE_INIT_GATT(void);
+MNODE_GATT_Status _GATT_MULT_SERVER_ADD_SERVICE(uint8_t *service_uuid,uint16_t *service_handle);
+MNODE_GATT_Status _GATT_MULT_NODE_TEST_MODULE_MASTER(void);
 
 
 #endif /* _MNODE_GATT_H_ */
