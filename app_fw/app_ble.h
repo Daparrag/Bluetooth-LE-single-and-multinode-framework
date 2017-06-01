@@ -98,22 +98,118 @@
 #endif
 
 
-
-typedef struct 
-{
-	uint8_t offset
-	uint8_t len
-	const uint8_t *val;
-}addr_conf;
-
-
-typedef enum 
+typedef enum /*used for return the result of and operation on the application*/
 {
   APP_SUCCESS = 0x00,
   APP_ERROR = 0x10,
   APP_NOT_CONFIG= 0x02
-} APP_Status;
+} APP_Status; 
 
+
+typedef struct{ /*structure that define any characteristic on BLE_app firmware*/
+	uint8_t CharTimeUUID[16];            /*!< Control characteristic UUID.*/
+	uint16_t CharHandle;             /*!< Audio characteristic handle.*/
+	void * char_value;
+	void * next_char_val;
+	uint8_t n_val;
+}app_char_t;
+
+typedef struct{/*structure that define any service on BLE_app firmware*/
+	uint8_t ServiceUUID[16];              /*!< Service UUID.*/
+	uint16_t ServiceHandle;               /*!< Service handle.*/
+	app_char_t * char;
+	app_char_t * next_char;
+	uint8_t n_service;
+}app_service_t;
+
+
+
+
+/**
+*STATIC_PROFILE: static profile declaration:
+*it is used for declare a specific BLE profile the type must be a structure that will be the first element 
+*of the application profile. This implementation uses a pointer for handler ta set of diferent linked services and 
+*characteristic data strctures.
+*@param: name of the profile.
+*/
+
+#define STATIC_PROFILE(name)\
+			static void * CONCAT(name,_profile)=NULL;\
+			static app_profile_t name = (app_profile_t)&CONCAT(name,_profile)
+
+/**
+*PROFILE: global profile declaration:
+*it is used for declare a specific BLE profile the type must be a structure that will be the first element 
+*of the application profile. This implementation uses a pointer for handler ta set of diferent linked services and 
+*characteristic data strctures.
+**@param: name of the profile.
+*/
+#define PROFILE(name)\
+			void * CONCAT(name,_profile);\
+			app_profile_t name
+
+
+
+/**
+*STATIC_SERVICE: static service declaration:
+*it is used for declare a static & specific BLE service the type must be a structure that will be the first service 
+*of the application profile. This implementation uses a pointer for handler the services data strctures.
+*@param: name of the service.
+*/
+#define STATIC_SERVICE(name)\
+			static void * CONCAT(name,_service)=NULL;\
+			static app_service_t name = (app_service_t)&CONCAT(name,_service)
+
+/**
+*SERVICE: global service declaration:
+*it is used for declare a global & specific BLE service associate to one specific profile. 
+*The type must be a structure that will be the first element of the service list. 
+*This implementation uses a pointer for handler a set of diferent linked services
+**@param: name of the service.
+*/
+#define SERVICE(name)\
+			void * CONCAT(name,_service);\
+			app_service_t name
+
+
+/**
+*STATIC_CHAR: static characteristic declaration:
+*it is used for declare a static and specific BLE characteristic associate to  a specific service the 
+*type must be a structure that will be the first element of the characteristic list. This implementation 
+*uses a pointer for handler ta set of diferent linked characteristics and value data strctures.
+*@param: name of the profile.
+*/
+#define STATIC_CHAR(name)\
+			static void * CONCAT(name,_char)=NULL;\
+			static app_char_t name = (app_char_t)&CONCAT(name,_char)
+
+/**
+*CHAR: global profile declaration:
+*it is used for declare a specific BLE profile the type must be a structure that will be the first element 
+*of the application profile. This implementation uses a pointer for handler ta set of diferent linked services and 
+*characteristic data strctures.
+**@param: name of the profile.
+*/
+#define CHAR(name)\
+			void * CONCAT(name,_char);\
+			app_char_t name
+
+/**
+* the profile_type
+*/
+typedef void ** app_profile_t;
+
+
+
+/**
+* global_func_declaration
+*/
+
+
+APP_Status APP_Init_BLE(void); /*init the application*/
+APP_Status profile_init(app_profile_t profile);
+APP_Status add_service(app_profile_t profile,app_service_t service);
+APP_Status add_char(/*ok*/);
 
 
 #endif /* PTP_BLE_H */
