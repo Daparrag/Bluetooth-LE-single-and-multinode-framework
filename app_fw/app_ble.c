@@ -9,7 +9,7 @@
 
 /**********************Local Variables***********************/
 uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
-volatile uint8_t  bnrg_expansion_board = IDB04A1;
+uint8_t  bnrg_expansion_board = IDB04A1;
 const uint8_t DEVICE_BDADDR[] = { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1 }; /*central device addrs*/
 
 /************************************************************/
@@ -25,29 +25,52 @@ MY_HAVE_IDB0xA1(1, aci_gap_init)
         ((*GAP_INIT_FUNC[arch & BLE_ARCH_MASK])(_role,_privacity_enable,_device_name_char_length,\
                                               _service_handler,_dev_name_char_handle,\
                                               _appearance_char_handle))/*init gap function*/
+          
+/******************************Static func************************************************/ 
+static int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion);          
+/*****************************************************************************************/          
+
 /**
-  * @brief  This function initialize the profile list.
-  * @ This function must be called at the begining of the application.
-  * @param profile datastructure.
-  * @
-  */
-void profile_control_init(app_profile_t * profile){
-    LIST_STRUCT_INIT(profile, _service);
-    profile->n_service=0;
-}
-/**
-  * @brief  This function is called to add Start the BLE APP firware.
+  * @brief  This function is called to retrieve the BLE APP version.
   * @param void.
+  * @retval APP_Status: Value indicating success or error code.
+  */
+  
+static int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion){
+
+
+  uint8_t status;
+  uint8_t hci_version, lmp_pal_version;
+  uint16_t hci_revision, manufacturer_name, lmp_pal_subversion;
+
+  status = hci_le_read_local_version(&hci_version, &hci_revision, &lmp_pal_version, 
+				     &manufacturer_name, &lmp_pal_subversion);
+
+  if (status == BLE_STATUS_SUCCESS) {
+    *hwVersion = hci_revision >> 8;
+    *fwVersion = (hci_revision & 0xFF) << 8;              // Major Version Number
+    *fwVersion |= ((lmp_pal_subversion >> 4) & 0xF) << 4; // Minor Version Number
+    *fwVersion |= lmp_pal_subversion & 0xF;               // Patch Version Number
+  }
+
+  HCI_Process(); // To receive the BlueNRG EVT
+
+  return status;
+
+}
+
+/**
+  * @brief  This function is called to init the BLE architecture.
+  * @param  none
   * @retval APP_Status: Value indicating success or error code.
   */
 
 APP_Status APP_Init_BLE(void){/*can be used by any application*/
-
   uint8_t ret = 0;
   uint8_t  hwVersion;
   uint16_t fwVersion;  
 /* get the BlueNRG HW and FW versions */
-  getBlueNRGVersion(&hwVersion, &fwVersion);
+  APP_BLE_GET_VERSION(&hwVersion, &fwVersion);
    BlueNRG_RST();
    
     if (hwVersion > 0x30) { 
@@ -60,8 +83,14 @@ APP_Status APP_Init_BLE(void){/*can be used by any application*/
   	{
     	return APP_ERROR;
   	}
-
-
+        
+ 
+  ret = aci_gatt_init();    
+         if(ret)
+         {
+             return APP_ERROR;
+         }
+  
   	ret = aci_gap_init(GET_ROLE(bnrg_expansion_board), 0, 0x07,  &service_handle, &dev_name_char_handle,  &appearance_char_handle,bnrg_expansion_board);
 
 
@@ -81,8 +110,21 @@ APP_Status APP_Init_BLE(void){/*can be used by any application*/
   aci_hal_set_tx_power_level(1, 5);
   
   return APP_SUCCESS;
-
 }
+
+/**
+  * @brief  This function initialize the profile list.
+  * @ This function must be called at the begining of the application.
+  * @param profile datastructure.
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+APP_Status APP_init_BLE_Profile(app_profile_t * profile){
+   LIST_STRUCT_INIT(profile, _service);
+    profile->n_service=0;
+    return APP_SUCCESS;
+}
+
 
 /**
   * @brief  This function is called to add any Service.
@@ -109,36 +151,36 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
  return APP_SUCCESS;
 }
 
-
-
 /**
   * @brief  This function is called to add any characteristic.
   * @param  service_uuid: Service uuid value.
   * @param  service_handle: Pointer to a variable in which the service handle will be saved.
   * @retval APP_Status: Value indicating success or error code.
   */
-
-static app_service_t * get_tail_service(app_profile_t profile){
-	struct app_service_t * temp_p;
-	if(*profile==NULL){
-		return NULL;
-	}
-
-	for(l=*profile.service;l->next_service != NULL;l->next_service);
-		return l;
+APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
+    tBleStatus ret;
+    LIST_STRUCT_INIT(attr,_value);
+    list_add(service->_attr,attr);
+    
+    ret = aci_gatt_add_char(service->ServiceHandle,
+                          attr->charUuidType, 
+                          attr->CharUUID, 
+                          attr->charValueLen, 
+                          attr->charProperties, 
+                          attr->secPermissions,
+                          attr->gattEvtMask,
+                          attr->encryKeySize,
+                          attr->isVariable,
+                          &(attr->CharHandle));
+    
+    if (ret != BLE_STATUS_SUCCESS) {
+      /*delete the attr entry in the service list*/
+      return APP_ERROR;
+      
+    }  
+    service->n_attr+=1;
+    return APP_SUCCESS;
 }
 
 
-static app_service_t * get_tail_characteristic(app_profile_t profile, app_service_t service){
 
-}
-
-static app_char_t * get_tail_value(app_profile_t profile, app_service_t service, app_char_t chart){
-
-}
-
-
-add_service(app_profile_t profile, app_service_t* service){
-	/*declare the service name*/
-
-}

@@ -1,12 +1,34 @@
 #ifndef APP_BLE_H
 #define APP_BLE_H
 
+/* Includes ------------------------------------------------------------------*/
 #include "cube_hal.h"
-#include "osal.h"
+#include "hal_types.h"
+#include "bluenrg_gatt_server.h"
+#include "bluenrg_gap.h"
+#include "string.h"
+#include "bluenrg_gap_aci.h"
+#include "bluenrg_gatt_aci.h"
+#include "hci_const.h"
+#include "gp_timer.h"
+#include "bluenrg_hal_aci.h"
+#include "bluenrg_aci_const.h"
+#include "hci.h"
+#include "hci_le.h"
+#include "hal.h"
+#include "sm.h"
+#include "debug.h"
+#include "role_type.h"
+#include "uart_support.h"
+#include "stm32_bluenrg_ble.h"
 #include <list.h>
 
 #ifdef BLE_APP_CONFIG
 #include "ble_app_conf.h" 
+#endif
+
+#ifdef DEBUG
+#include "debug.h"
 #endif
 
 /*used the valid roles*/
@@ -28,6 +50,8 @@
 #ifndef ROLE
 #define ROLE GAP_CENTRAL_ROLE
 #endif
+
+
 
 #define GET_ROLE(arch) ((arch)==0 ? CONCAT(ROLE,_IDB04A1) : CONCAT(ROLE,_IDB05A1))
 
@@ -91,7 +115,7 @@
 
 /*Local_Macros*/
 #define MY_HAVE_IDB0xA1(arch, func_name) ((arch) == 1 ?func_name##_IDB05A1:func_name##_IDB04A1)/*concatenation of the funtion name and the architecture*/
-#define BLE_ARCH_MASK 0 /*used for reconize if we have a IDB04A1 or IDB05A1 architecture  BLE_ARCH_MASK is = #architectures -1 */
+#define BLE_ARCH_MASK 1 /*used for reconize if we have a IDB04A1 or IDB05A1 architecture  BLE_ARCH_MASK is = #architectures -1 */
 
 #ifndef UUID_TYPE
 #define UUID_TYPE UUID_TYPE_128
@@ -144,10 +168,11 @@ typedef struct{
 /**
 * global_func_declaration
 */
-APP_Status APP_Init_BLE(void); /*init the application*/
-APP_Status profile_init(void);
-APP_Status add_service(app_profile_t profile,app_service_t service);
-APP_Status add_char(/*ok*/);
+APP_Status APP_Init_BLE(void); /*init the BLE_arch*/
+APP_Status APP_init_BLE_Profile(app_profile_t * profile);/*init the BLE app*/
+APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service);/*add BLE services*/
+APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr);/*add BLE attribute*/
+
 
 
 #endif /* PTP_BLE_H */
