@@ -300,7 +300,10 @@ APP_Status APP_create_connection_BLE(void *connect_config,
                                     uint8_t peer_addrtype, 
                                     void * peer_addrs);/*used by setup connection by the master node*/
 
+void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise); /*used for retrieve the default config*/
 
+int APP_get_addrs_BLE(void * addrs);/*used for retrieve the address of the BLE device*/
 
+int APP_get_name_BLE(void * name); /*used for retrieve the name of the BLE device*/
 
 #endif /* PTP_BLE_H */

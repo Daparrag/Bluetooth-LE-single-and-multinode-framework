@@ -11,10 +11,10 @@
 uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
 uint8_t  bnrg_expansion_board =  IDB04A1;
 const uint8_t DEVICE_BDADDR[] =  { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1 }; /*device addrs*/
-const char local_name[] = {ADV_TYPE_COMPLETE_LOCAL_NAME,'B','L','E','-','U','N','O'}; /*device name*/
-app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
-app_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
-app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
+const char local_name[] = {AD_TYPE_COMPLETE_LOCAL_NAME,'B','L','E','-','U','N','O'}; /*device name*/
+const app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
+const app_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
+const app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
 /************************************************************/
 
 tBleStatus(*const  GAP_INIT_FUNC [BLE_ARCH_MASK+1])(uint8_t ,uint8_t ,uint8_t ,uint16_t* ,
@@ -243,12 +243,12 @@ APP_Status APP_set_advertise_BLE(void * advertise_conf,
   tBleStatus ret;
   app_advertise_t * user_config;
 /*check for respouse data*/  
-  if(respounse_data==NULL){
+  if(scanres_data==NULL){
     /*not advertisement response data*/
     hci_le_set_scan_resp_data(0,NULL);
   }else{
     /*set the hci command for scan respouse data in the advertisement event*/
-    hci_le_set_scan_resp_data(respounse_data_size,(uint8_t * ) respounse_data);
+    hci_le_set_scan_resp_data(scanres_data_size,(uint8_t * ) scanres_data);
   }
 
 /*check for advertise config*/
@@ -293,7 +293,6 @@ if (ret != BLE_STATUS_SUCCESS){
    return APP_SUCCESS;
 
 }
-
 
 /**
   * @brief  This function management the connection setup procedure.
@@ -350,3 +349,44 @@ APP_Status APP_create_connection_BLE(void *connect_config,
 
    return APP_SUCCESS;
 }
+
+/*user control functions*/
+
+/**
+  * @brief  This function return the default configuration for the BLE app firmware.
+  * @param  void *app_discovery (used for catch the discovery config parameter)
+  * @param  void * app_connection (used for catch the connection config parameter)
+  * @param  void * app_advertise (used for catch the advertise config parameter)
+  * @retval none.
+  */
+
+void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise){
+
+}
+
+
+/**
+  * @brief  This function management the connection setup procedure.
+  * @param  void * name (used for catch the device name)
+  * @retval name_length: the length of the name
+  */
+
+int APP_get_name_BLE(void * name){
+  return 0;
+
+}
+
+
+/**
+  * @brief  This function management the connection setup procedure.
+  * @param  void * addrs (used for catch the device name)
+  * @retval addrs_length: the length of the address
+  */
+
+
+int APP_get_addrs_BLE(void * addrs){
+  return 0;
+
+
+}
+
