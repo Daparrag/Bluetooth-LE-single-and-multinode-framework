@@ -20,32 +20,6 @@ typedef enum Signal_ {
 }Signal;
 
 
-/** 
-* @brief ptp service and characteristics uuid.
-*/
-typedef struct
-{
-  uint8_t ServiceUUID[16];              /*!< Service UUID.*/
- 
-  uint8_t CharTimeUUID[16];            /*!< Control characteristic UUID.*/
-   
-} ptp_uuid_t;
-
-
-
-
-/** 
-* @brief ptp service and characteristics handle.
-*/
-typedef struct
-{
-  uint16_t ServiceHandle;               /*!< Service handle.*/
-  
-  uint16_t CharTimeHandle;             /*!< Audio characteristic handle.*/
-  
-} ptp_ProfileHandle_t;
-
-
 
 /** 
 * @brief ptp packet structures.

@@ -9,9 +9,12 @@
 
 /**********************Local Variables***********************/
 uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
-uint8_t  bnrg_expansion_board = IDB04A1;
-const uint8_t DEVICE_BDADDR[] = { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1 }; /*central device addrs*/
-
+uint8_t  bnrg_expansion_board =  IDB04A1;
+const uint8_t DEVICE_BDADDR[] =  { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1 }; /*device addrs*/
+const char local_name[] = {ADV_TYPE_COMPLETE_LOCAL_NAME,'B','L','E','-','U','N','O'}; /*device name*/
+app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
+app_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
+app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
 /************************************************************/
 
 tBleStatus(*const  GAP_INIT_FUNC [BLE_ARCH_MASK+1])(uint8_t ,uint8_t ,uint8_t ,uint16_t* ,
@@ -184,3 +187,166 @@ APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
 
 
 
+/**
+  * @brief  This function management the node discovery procedure.
+  * @param  void * dicovery_config : user configuration (optional)
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+
+APP_Status APP_set_discovery_BLE(void * dicovery_config){/*this is used for receive advertisements called by clients*/
+ 
+  tBleStatus ret;
+  app_discovery_t * user_config;
+
+  if(dicovery_config==NULL){
+    /*uses the default configuration*/
+    /*default_config*/
+    ret = aci_gap_start_general_discovery_proc(DV_default_config.sinterval,
+                                                DV_default_config.swindows,
+                                                DV_default_config.ownaddrtype,
+                                                DV_default_config.fduplicates);
+
+  }else{
+    /*uses the user config*/
+    user_config = (app_discovery_t*)dicovery_config;
+    ret = aci_gap_start_general_discovery_proc(user_config->sinterval,
+                                              user_config->swindows,
+                                              user_config->ownaddrtype,
+                                              user_config->fduplicates);
+
+  }
+
+   if (ret != BLE_STATUS_SUCCESS){
+     return APP_ERROR;
+   }
+
+   return APP_SUCCESS;
+
+}
+
+/**
+  * @brief  This function management the node advertisement procedure called by the server.
+  * @param  void * advertise_conf : user configuration (optional)
+  * @param  uint8_t scanres_data_size :scan respounse datasize (default 0)
+  * @param  void * scanres_data:scan respounse data (default NULL)
+  * @param  uint8_t serviceuuidlength:service uuid length (default 0)
+  * @param  void * serviceuuidlist:service uuid list (default NULL)
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+APP_Status APP_set_advertise_BLE(void * advertise_conf, 
+                                uint8_t scanres_data_size,
+                                void * scanres_data,
+                                uint8_t serviceuuidlength, 
+                                void * serviceuuidlist){/*server generate advertisements to clients*/
+  tBleStatus ret;
+  app_advertise_t * user_config;
+/*check for respouse data*/  
+  if(respounse_data==NULL){
+    /*not advertisement response data*/
+    hci_le_set_scan_resp_data(0,NULL);
+  }else{
+    /*set the hci command for scan respouse data in the advertisement event*/
+    hci_le_set_scan_resp_data(respounse_data_size,(uint8_t * ) respounse_data);
+  }
+
+/*check for advertise config*/
+  if(advertise_conf==NULL){
+
+    /*uses default configuration*/
+      ret = aci_gap_set_discoverable(AV_default_config.adveventtype,
+                                     AV_default_config.advintervalmin,
+                                     AV_default_config.advintervalmax,
+                                     AV_default_config.advaddrstype,
+                                     AV_default_config.advfilterpoli,
+                                     sizeof(local_name),
+                                     local_name,
+                                     serviceuuidlength,
+                                     (uint8_t*)serviceuuidlist,
+                                     AV_default_config.slconnintervalmin,
+                                     AV_default_config.slconnintervalmax
+                                    );
+
+  }else{
+    /*uses user configuration*/
+    user_config=(app_advertise_t *) advertise_conf;
+
+    ret = aci_gap_set_discoverable( user_config->adveventtype,
+                                    user_config->advintervalmin,
+                                    user_config->advintervalmax,
+                                    user_config->advaddrstype,
+                                    user_config->advfilterpoli,
+                                    sizeof(local_name),
+                                    local_name,
+                                    serviceuuidlength,
+                                    (uint8_t*)serviceuuidlist,
+                                    user_config->slconnintervalmin,
+                                    user_config->slconnintervalmax
+                                    );
+  }
+
+if (ret != BLE_STATUS_SUCCESS){
+     return APP_ERROR;
+   }
+
+   return APP_SUCCESS;
+
+}
+
+
+/**
+  * @brief  This function management the connection setup procedure.
+  * @param  void *connect_config: user configuration (optional)
+  * @param  uint8_t peer_addrtype: 0x00 public device address 0x01 random device adress
+  * @param  void * peer_addrs: address of the peer device
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+APP_Status APP_create_connection_BLE(void *connect_config, 
+                                    uint8_t peer_addrtype, 
+                                    void * peer_addrs){/*used by setup connection by the master node*/
+ 
+ tBleStatus ret;
+ app_connection_t * user_config;
+
+  if(connect_config==NULL){
+  /*uses the default configuration*/
+    ret = aci_gap_create_connection(CN_default_config.sinterval,
+                                    CN_default_config.swindows,
+                                    peer_addrtype,
+                                    (uint8_t *) peer_addrs,
+                                    CN_default_config.ownaddrtype,
+                                    CN_default_config.cintervalmin,
+                                    CN_default_config.cintervalmax,
+                                    CN_default_config.clatency,
+                                    CN_default_config.stimeout,
+                                    CN_default_config.clengthmin,
+                                    CN_default_config.clengthmax
+                                    ); 
+
+  }else{
+    /*uses the user configuration*/
+    user_config=(app_connection_t *) connect_config;
+
+     ret = aci_gap_create_connection(user_config->sinterval,
+                                    user_config->swindows,
+                                    peer_addrtype,
+                                    (uint8_t *) peer_addrs,
+                                    user_config->ownaddrtype,
+                                    user_config->cintervalmin,
+                                    user_config->cintervalmax,
+                                    user_config->clatency,
+                                    user_config->stimeout,
+                                    user_config->clengthmin,
+                                    user_config->clengthmax
+                                    ); 
+
+  }
+
+  if (ret != BLE_STATUS_SUCCESS){
+     return APP_ERROR;
+   }
+
+   return APP_SUCCESS;
+}
