@@ -44,9 +44,13 @@ void set_sv_handler_config(void * config){
 } 
 
 
-/*connection inclide the connection characteristics and the service haracteristics */
+/*connection inclide the connection characteristics and the service characteristics */
+/*this wil recursively scan for all the services and attributes in the profile structure
+* the user could overwrite this function acording to what needs.
+*/
 void service_handler(connection_t * connection){
 
-
 }
+
+
 

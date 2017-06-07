@@ -1,4 +1,4 @@
-/*suported firmware for BLE app_layer*/
+/*suported firmware for BLE app_layer (single node specification)*/
 /*application management functions*/
 /*global procedures common to any application */
 

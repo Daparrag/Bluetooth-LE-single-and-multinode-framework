@@ -119,9 +119,6 @@
 #endif
 
 
-
-
-
 /*Local_Macros*/
 #define MY_HAVE_IDB0xA1(arch, func_name) ((arch) == 1 ?func_name##_IDB05A1:func_name##_IDB04A1)/*concatenation of the funtion name and the architecture*/
 #define BLE_ARCH_MASK 1 /*used for reconize if we have a IDB04A1 or IDB05A1 architecture  BLE_ARCH_MASK is = #architectures -1 */
@@ -247,6 +244,11 @@ ST_CONNECTED_WAIT_CHAR_DISC,
 ST_UNABLE_TO_CONNECT  
 }cn_state_t;
 
+typedef enum service_State{
+  ST_SERVICE_DISCOVERY,
+  ST_CHAR_DISCOVERY
+}sv_state_t;
+
 
 typedef struct{ /*single connection structure*/
 uint16_t Connection_Handle;           /*!< define one and only one connection handler x slave  */
@@ -257,6 +259,7 @@ config_connection_t * cconfig;       /*!< device has a special connection config
 dv_state_t device_cstatus;            /*!< status of the device for this specific connection*/
 /*NOTE: include the service definition for this connection  */
 cn_state_t connection_status;         /*!< this is the connection status.*/
+sv_state_t service_status;
 }connection_t;
 
 
