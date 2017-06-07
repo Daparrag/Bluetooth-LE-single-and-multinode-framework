@@ -1,0 +1,219 @@
+/*connection handler 
+* version 1.0
+* task:
+* -Connection stablishment single or multiple connections  
+*  according to the network topology.
+*
+*- Management the broadcast transmissions in case of broadcast or observer roles.
+*
+* NOTE:
+* -In case of multiple connections this module is able to handler specific 
+*  requirements for each connection, allowing and efficient management of the BLE resources
+*  since now it is possible to stablish an specific connection parameter per an specific node.
+*
+*/
+#include <chandler.h>
+
+
+#define SEG_DELAY 0x03E8 /*1seg delay*/
+#define HALF_SEG_DELAY 0x1F4 /*1/2 seg delay*/
+uint8_t  bnrg_connection_mode =  CONNECTION_ORIENTED;/*the default connection mode*/
+dv_state_t bnrg_device_status = DEVICE_UNITIALIZED; /*device status initialized by default*/
+app_discovery_t * DV_config = NULL;
+app_advertise_t  * AV_config= NULL;
+const config_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
+/************************************Module Flags*****************************************/
+
+
+
+/******************************Static func************************************************/ 
+static void connection_handler_coriented();
+static void connection_handler_broadcast();
+static void connection_unestablished_toggle(void);
+static void connection_stablished_toggle(void);
+static void connection_handler_error(void);
+/*****************************************************************************************/
+
+/**
+  * @brief  This function is called to setup the discovery configuration into the connection handler module.
+  * @param  app_discovery_t * dv_conf: contain the discovery configuration.
+  * @retval void.
+  */
+  
+void connection_handler_set_discovery_config(app_discovery_t * dv_conf){
+	DV_config = dv_conf;
+};
+
+
+/**
+  * @brief  This function is called to setup the advertisement configuration into the connection handler module.
+  * @param  app_discovery_t * dv_conf: contain the discovery configuration.
+  * @retval void.
+  */
+  
+void connection_handler_set_advertise_config(app_advertise_t  * adv_conf){
+	AV_config = adv_conf;
+}
+
+
+/**
+  * @brief  This function is used for indicate the connection_unestablished state.
+  * @param void.
+  * @retval void.
+  */
+
+void connection_unestablished_toggle(void){
+
+if(led_toggle_count++ > LED_TOGGLE_UNESTABLISHED)
+	{
+		led_toggle_count=0;
+		BSP_LED_Toggle(LED2);
+	}
+}
+
+
+/**
+  * @brief  This function is used for indicate the connection_stablished state.
+  * @param void.
+  * @retval void.
+  */
+void connection_stablished_toggle(void){
+
+if(led_toggle_count++ > LED_TOGGLE_STABLISHED)
+	{
+		led_toggle_count=0;
+		BSP_LED_Toggle(LED2);
+	}
+}
+
+
+/**
+  * @brief  This function is called to handler the connection between two devices acting as a client server.
+  * @param  connection_t * connection: this is an specific connection structure;
+  * @param   net_flags * flags: flags to handler the status of the network;
+  * @retval void.
+  */
+void connection_handler_coriented (connection_t * connection, net_flags * flags){
+APP_Status ret;	
+/*input verification*/
+if(connection==NULL || flags==NULL){
+	PRINTF("some of the imput parameters on the connection handler is NULL  please verify\n");
+	return;
+}
+/*fsm*/
+	switch(connection->connection_status){
+		case ST_UNESTABLISHED:
+		{
+			connection_unestablished_toggle();
+			switch(connection->device_cstatus){
+				case DEVICE_UNITIALIZED:
+				{
+					PRINTF("device unitialized please reinitialize \n");
+					HAL_DELAY(SEG_DELAY);
+				}
+				break;
+				case DEVICE_DISCOVERY_MODE:
+				{/*connection UNESTABLISHED & device in DISCOVERY_MODE*/
+					
+					if(flags->device_found && !(flags->wait_end_procedure))
+						{/*single connection setup*/
+							ret=CH_create_connection_BLE(connection->cconfig, connection->device_type_addrs, (void*)&(connection->device_address));	
+							if(ret != CHADLE_SUCCESS)
+							{
+								PRINTF("error has been occour during the single connection setup \n");
+								connection_handler_error();
+							}
+							/*update_flag*/
+							flags->device_found=0;
+							connection->connection_status = ST_READY_TO_INTERCHANGE;
+							connection->device_cstatus=DEVICE_READY;
+
+
+						}
+					else if(!(flags->device_found) && !(flags->wait_end_procedure))
+						{/*setup the discovery procedure.*/
+							ret=APP_set_discovery_BLE(DV_config);
+							if(ret != CHADLE_SUCCESS)
+							{
+								PRINTF("error has been occour during the setting the discovery procedure \n");
+								connection_handler_error();
+							}
+							flags->wait_end_procedure=1;
+
+						}			
+				}
+				break;
+			} 
+		}
+		break;
+		case ST_STABLISHED:
+		{
+			connection_stablished_toggle();
+		}
+		break;
+		default:
+		break;
+	}
+}
+
+/**
+  * @brief  This function management the connection setup procedure.
+  * @param  void *connect_config: user configuration (optional)
+  * @param  uint8_t peer_addrtype: 0x00 public device address 0x01 random device adress
+  * @param  void * peer_addrs: address of the peer device
+  * @retval APP_Status: Value indicating success or error code.
+  */
+CHADLE_Status CH_create_connection_BLE(void *connect_config, 
+                                    uint8_t peer_addrtype, 
+                                    void * peer_addrs){/*used by setup connection by the master node*/
+ 
+ tBleStatus ret;
+ config_connection_t * user_config;
+
+  if(connect_config==NULL){
+  /*uses the default configuration*/
+    ret = aci_gap_create_connection(CN_default_config.sinterval,
+                                    CN_default_config.swindows,
+                                    peer_addrtype,
+                                    (uint8_t *) peer_addrs,
+                                    CN_default_config.ownaddrtype,
+                                    CN_default_config.cintervalmin,
+                                    CN_default_config.cintervalmax,
+                                    CN_default_config.clatency,
+                                    CN_default_config.stimeout,
+                                    CN_default_config.clengthmin,
+                                    CN_default_config.clengthmax
+                                    ); 
+
+  }else{
+    /*uses the user configuration*/
+    user_config=(config_connection_t *) connect_config;
+
+     ret = aci_gap_create_connection(user_config->sinterval,
+                                    user_config->swindows,
+                                    peer_addrtype,
+                                    (uint8_t *) peer_addrs,
+                                    user_config->ownaddrtype,
+                                    user_config->cintervalmin,
+                                    user_config->cintervalmax,
+                                    user_config->clatency,
+                                    user_config->stimeout,
+                                    user_config->clengthmin,
+                                    user_config->clengthmax
+                                    ); 
+
+  }
+
+  if (ret != BLE_STATUS_SUCCESS){
+     return CHADLE_ERROR;
+   }
+
+   return CHADLE_SUCCESS;
+}
+
+
+
+void connection_handler_error(void){
+	BSP_LED_Off(LED2);
+	while(1);
+}

@@ -65,35 +65,6 @@
 #ifndef IDB05A1
 #define IDB05A1 1
 #endif
-/*connection setup default parameters*/
-#ifndef SCAN_P
-#define SCAN_P  		(0x0028)      		             /*!< Scan Interval 40ms.*/			
-#endif
-#ifndef SCAN_L
-#define SCAN_L  		(0x0014)      		             /*!< Scan Window.  20ms*/
-#endif
-#ifndef	CONN_P1
-#define CONN_P1 		((int)((10)/1.25f))  	         /*!< Min connection interval in ms.*/
-#endif
-#ifndef	CONN_P2
-#define CONN_P2			((int)((10)/1.25f))  	         /*!< Max connection interval in ms.*/
-#endif
-#ifndef	SUPERV_TIMEOUT
-#define SUPERV_TIMEOUT  (100)         		         /*!< Supervision timeout.*/
-#endif
-#ifndef	CONN_L1
-#define CONN_L1         ((int)((5)/0.625f))   	   /*!< Min connection length.*/
-#endif
-#ifndef	CONN_L2
-#define CONN_L2         ((int)((5)/0.625f))   	   /*!< Min connection length.*/
-#endif
-#ifndef	LATENCY
-#define LATENCY			(0)
-#endif
-
-#ifndef OUR_ADDRS_TYPE
-#define OUR_ADDRS_TYPE PUBLIC_ADDR
-#endif
 
 /*scan setup default parameters*/
 #ifndef SLNODES
@@ -105,7 +76,6 @@
 #ifndef SCAN_WIN
 #define SCAN_WIN	  (5)
 #endif
-
 
 /*advertise default configuration*/
 #ifndef ADV_EVT_TYPE
@@ -178,6 +148,8 @@ typedef enum /*used for return the result of and operation on the application*/
   APP_NOT_CONFIG= 0x02          /*!< not configuration is present before to applied a command*/
 } APP_Status; 
 
+
+
 typedef struct{
   LIST_STRUCT(_value);
   uint8_t CharUUID[16];            /*!< Control characteristic UUID.*/
@@ -218,20 +190,6 @@ typedef struct{/*structure for discovery configuration*/
 }app_discovery_t;
 
 
-typedef struct{/*structure for connection configuration*/
-uint16_t sinterval;               /*!<  Time interval between two LE scans:0x0004-0x4000(period)*/
-uint16_t swindows;                /*!<  Amoung of time for the duration of the LE scan:0x0004-0x4000(length)*/
-//uint8_t peer_addrtype; /*user parameter*/
-//uint8_t peer_addrs [6];/*user parameter*/
-uint8_t ownaddrtype;             /*!<  0x00:public address, 0x01: random device address >*/ 
-uint16_t cintervalmin;           /*!<  minimum value for connection event interval shall be less or equal to  cintervalmax: 0x0006-0x0C80 >*/
-uint16_t cintervalmax;           /*!<  maximum value for connection event interval shall be greater or equal to  cintervalmin: 0x0006-0x0C80>*/
-uint16_t clatency;               /*!<  salve latency for connection in number of connection events:0x0000-0x01F4>*/
-uint16_t stimeout;               /*!<  supervisor time out for LE link: 0x000A-0x0C80>*/
-uint16_t clengthmin;             /*!<  minimum length of connection event needed for LE: 0x0000-0xFFFF time N*0.625ms>*/
-uint16_t clengthmax;             /*!<  maximum length of connection event needed for LE: 0x0000-0xFFFF time N*0.625ms>*/
-}app_connection_t;
-
 
 typedef struct{/**structure for advertisement configuration*/
 uint8_t adveventtype;           /*!<  0x00: connectable undirected adverticement 
@@ -261,9 +219,12 @@ uint16_t slconnintervalmax;   /*!<  slave connection interval min value
 
 
 /*********************************** connection and network structures *********************/
-                    
+#ifdef MULTINODE                    
 #define EXPECTED_NODES 8
-#define MAX_SERVER_ATT_SIZE             0x03
+#else
+#define EXPECTED_NODES 1
+#endif
+//#define MAX_SERVER_ATT_SIZE             0x03
 
 
 /*device status*/
@@ -271,38 +232,45 @@ typedef enum device_state{
 DEVICE_UNITIALIZED,
 DEVICE_DISCOVERY_MODE,
 DEVICE_ADVERTISEMENT_MODE,
-DEVICE_CONNECTED,
-DEVICE_BROADCAST_MODE,
-DEVICE_OBSERVED_MODE
+DEVICE_READY
 }dv_state_t;
 
 
 /*connection_status*/
 typedef enum connection_State {
+ST_UNESTABLISHED,
+ST_READY_TO_INTERCHANGE,
+ST_STABLISHED,
 ST_DISCOVERY,
 ST_ADVERTISE, 
-ST_NOTCONNECTED, 
-ST_WAITCONNECTION, 
-ST_CONNECTED_WAIT_CHAR_DISC, 
-ST_READY 
+ST_CONNECTED_WAIT_CHAR_DISC,
+ST_UNABLE_TO_CONNECT  
 }cn_state_t;
 
 
 typedef struct{ /*single connection structure*/
 uint16_t Connection_Handle;           /*!< define one and only one connection handler x slave  */
-app_profile_t Node_profile;           /*!< could be one profile x slave (most convenient)*/
+/*NOTE: i guess that this can be part of service datastructure */app_profile_t Node_profile;           /*!< could be one profile x slave (most convenient)*/
 uint8_t device_type_addrs;            /*!< slave device addrs type*/
 uint8_t device_address[6];            /*!< device address val*/
-app_connection_t * cconfig;           /*!< device has a special connection configuration(optional) >*/
-cn_state_t connection_status;         /*!< this is the device current status.*/
+config_connection_t * cconfig;       /*!< device has a special connection configuration(optional) >*/
+dv_state_t device_cstatus;            /*!< status of the device for this specific connection*/
+/*NOTE: include the service definition for this connection  */
+cn_state_t connection_status;         /*!< this is the connection status.*/
 }connection_t;
+
+
+
+typedef struct{
+volatile uint8_t device_found;               /*!< this flag is fire when a new device has been found >*/    
+volatile uint8_t wait_end_procedure;         /*!< this flag is fire when a procedure is not ended >*/
+volatile uint8_t retry_conn;                 /*!< this flag is fire when a central node requere retry a connection with some pherispheral node>*/  
+}net_flags;
 
 
 typedef struct 
 {
-  uint8_t device_found;               /*!< this flag is fire when a new device has been found >*/    
-  uint8_t wait_end_procedure;         /*!< this flag is fire when a procedure is not ended >*/
-  uint8_t retry_conn;                 /*!< this flag is fire when a central node requere retry a connection with some pherispheral node>*/
+  net_flags flags;
   #ifdef MULTINODE
   uint8_t num_device_found;           /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
   connection_t mMSConnection[EXPECTED_NODES]; /*<! here one connection per node mangement by the application >*/
@@ -342,9 +310,9 @@ APP_Status APP_set_advertise_BLE(void * advertise_conf,
                                 void * scanres_data,
                                 uint8_t serviceuuidlength, 
                                 void * serviceuuidlist);/*server generate advertisements to clients*/
-APP_Status APP_create_connection_BLE(void *connect_config, 
-                                    uint8_t peer_addrtype, 
-                                    void * peer_addrs);/*used by setup connection by the master node*/
+//APP_Status APP_create_connection_BLE(void *connect_config, 
+//                                    uint8_t peer_addrtype, 
+//                                    void * peer_addrs);/*used by setup connection by the master node*/
 
 void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise); /*used for retrieve the default config*/
 
