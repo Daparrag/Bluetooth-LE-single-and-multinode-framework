@@ -82,8 +82,6 @@ static void init_ptp_profile(app_profile_t * profile){
 
 
 
-
-
 void ptp_Dispatch(ptp_fsm * ptp_inst){
 	switch(ptp_inst->C_State){
 		case INIT:
@@ -105,5 +103,3 @@ void app_Error_Handler(void){
 	
 }
 
-BV_Status app_gatt_AddService(uint8_t *service_uuid, uint16_t *service_handle)
-{}

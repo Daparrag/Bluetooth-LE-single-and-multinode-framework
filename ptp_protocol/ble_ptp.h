@@ -10,14 +10,14 @@
 #define DELAY_RSP 0x08
 
 
-typedef enum State_ {
+typedef enum ptp_State {
 	INIT, UNSYNC, SYNC, WAIT_RESP, PENDING_REQ
-}State;
+}ptp_state_t;
 
 
-typedef enum Signal_ {
+typedef enum ptp_Signal {
 	
-}Signal;
+}ptp_signal_t;
 
 
 
@@ -47,15 +47,13 @@ typedef struct{
 
 
 typedef struct ptp_fsm_ {
-	State C_State;
-	State Sub_State;
+	ptp_state_t ptp_cstate;
+	ptp_state_t ptp_substate;
 }ptp_fsm
 
 tBleStatus ptp_init_server();
 void ptp_init_client();
 Signal DecodeEvents();
 void ptp_Dispatch(ptp_fsm * ptp_ins);
-
-
 
 #endif /* PTP_BLE_H */

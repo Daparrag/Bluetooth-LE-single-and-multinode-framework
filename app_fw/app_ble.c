@@ -350,6 +350,8 @@ APP_Status APP_create_connection_BLE(void *connect_config,
    return APP_SUCCESS;
 }
 
+
+
 /*user control functions*/
 
 /**

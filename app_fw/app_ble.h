@@ -164,6 +164,11 @@
 #define SERVICE_TYPE PRIMARY_SERVICE
 #endif
 
+#ifndef LED_TOGGLE_CONFIG
+#define LED_TOGGLE_ADVERTICEMENT     800000
+#define LED_TOGGLE_DISCOVERY         800000
+#define LED_TOGGLE_CONNECTED          30000    
+#endif
 
 
 typedef enum /*used for return the result of and operation on the application*/
@@ -255,32 +260,73 @@ uint16_t slconnintervalmax;   /*!<  slave connection interval min value
 }app_advertise_t;
 
 
-/*********************************** Multinode Section *********************/
-#ifdef MULTINODE                      
-
+/*********************************** connection and network structures *********************/
+                    
 #define EXPECTED_NODES 8
 #define MAX_SERVER_ATT_SIZE             0x03
 
 
+/*device status*/
+typedef enum device_state{
+DEVICE_UNITIALIZED,
+DEVICE_DISCOVERY_MODE,
+DEVICE_ADVERTISEMENT_MODE,
+DEVICE_CONNECTED,
+DEVICE_BROADCAST_MODE,
+DEVICE_OBSERVED_MODE
+}dv_state_t;
 
-typedef struct{
+
+/*connection_status*/
+typedef enum connection_State {
+ST_DISCOVERY,
+ST_ADVERTISE, 
+ST_NOTCONNECTED, 
+ST_WAITCONNECTION, 
+ST_CONNECTED_WAIT_CHAR_DISC, 
+ST_READY 
+}cn_state_t;
+
+
+typedef struct{ /*single connection structure*/
 uint16_t Connection_Handle;           /*!< define one and only one connection handler x slave  */
-app_profile_t MultiNode_profile;      /*!< could be one profile x slave (most convenient)*/
+app_profile_t Node_profile;           /*!< could be one profile x slave (most convenient)*/
 uint8_t device_type_addrs;            /*!< slave device addrs type*/
 uint8_t device_address[6];            /*!< device address val*/
-uint8_t device_status;                /*!< this is the device current status.*/
-}MultNodeC_Handler;
+app_connection_t * cconfig;           /*!< device has a special connection configuration(optional) >*/
+cn_state_t connection_status;         /*!< this is the device current status.*/
+}connection_t;
 
 
 typedef struct 
 {
-  uint8_t num_device_found;
-  uint8_t wait_end_procedure;
-  uint8_t retry_conn;
-  MultNodeC_Handler mMSConnection[EXPECTED_NODES]; 
-}MultNodeNet_Handler;
+  uint8_t device_found;               /*!< this flag is fire when a new device has been found >*/    
+  uint8_t wait_end_procedure;         /*!< this flag is fire when a procedure is not ended >*/
+  uint8_t retry_conn;                 /*!< this flag is fire when a central node requere retry a connection with some pherispheral node>*/
+  #ifdef MULTINODE
+  uint8_t num_device_found;           /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
+  connection_t mMSConnection[EXPECTED_NODES]; /*<! here one connection per node mangement by the application >*/
+  #else
+  connection_t mMSConnection;         /*<! not multinode then a single connection is possible. >*/
+  #endif
+}network_t;
 
-#endif
+
+
+/*could be removed since the network has to be independent of the node*/
+typedef struct{                     /*central node type structure*/
+  network_t net;
+  dv_state_t central_status;
+}central_node_t;
+
+
+typedef struct{                    /* simple pherisperal node type structure*/
+  dv_state_t pherispheral_status;
+}spherispheral_node_t;
+
+typedef central_node_t broadcast_node_t; /*broadcast node type structure*/
+typedef spherispheral_node_t observer_node_t;  /*observer node type structure*/
+typedef central_node_t cpherispheral_node_t; /*complex pherispheral node*/
 
 
 /**
