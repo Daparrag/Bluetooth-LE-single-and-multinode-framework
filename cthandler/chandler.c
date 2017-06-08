@@ -94,7 +94,7 @@ if(led_toggle_count++ > LED_TOGGLE_STABLISHED)
   * @retval void.
   */
 void connection_handler_coriented (connection_t * connection, net_flags * flags){
-APP_Status ret;	
+CHADLE_Status ret;	
 /*input verification*/
 if(connection==NULL || flags==NULL){
 	PRINTF("some of the imput parameters on the connection handler is NULL  please verify\n");
