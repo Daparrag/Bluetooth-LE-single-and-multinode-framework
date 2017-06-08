@@ -1,6 +1,6 @@
 # Lib
-Some libraries for bluetooth LE synchonization protocol 
+Some libraries for bluetooth LE synchonization protocol. 
 
 ## components description
 
-<img src="https://github.com/Daparrag/Audio-Player-STM32f4-and-Erika-OS/blob/master/ImplementationDiagram.png" alt="Implementation Diagram" width="1000px" />
+<img src="https://github.com/Daparrag/Lib/blob/service_handler_branch/screenshots/Components_Structures.PNG" alt="Component Diagram" width="1000px" />
