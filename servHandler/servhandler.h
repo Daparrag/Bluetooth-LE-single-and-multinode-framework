@@ -26,10 +26,6 @@ typedef enum{
 	SERV_ERROR=0x01;
 }SERV_Status;
 
-typedef struct{
-volatile uint8_t service_discovery;               /*!< this flag is fire when a new service has been discover >*/    
-volatile uint8_t char_discovery;                  /*!< this flag is fire when a new char has been discover >*/
-}sv_hdler_flags;
 
 typedef struct{
 
@@ -37,19 +33,17 @@ typedef struct{
   uint8_t char_disc_mode;
 }servhandler_conf;
 
-typedef struct{
-uint8_t services_to_scan;
-uint8_t services_scanned;
-uint8_t char_to_scan;
-uint8_t char_scanned;
-}char_flags;
-
 
 typedef struct{
-sv_hdler_flags flags;
 servhandler_conf config;
 }service_t;
 
 
+void get_sv_handler_config(void *config);/*return the service handler configuration*/
+void set_sv_handler_config(void * config);/*set up the service handler configuration*/
+void service_handler(connection_t * connection, net * flags);/*finite state machine which
+															 * describe the behavior of the service handler module
+															 * you can overwrite this function according to what your application needs.
+															 */
 #endif /* SERVICE_HANDLER_BLE_H */
 /**/

@@ -145,6 +145,16 @@ typedef enum /*used for return the result of and operation on the application*/
   APP_NOT_CONFIG= 0x02          /*!< not configuration is present before to applied a command*/
 } APP_Status; 
 
+typedef struct{
+uint8_t services_to_find;               /*!< this flag indicates how many services has to been discovered by the service_handler>*/    
+uint8_t service_discovery_success;  
+}service_flags;
+
+typedef struct{
+uint8_t services_scanned;               /*!< how many services have been scanned >*/
+uint8_t char_scanned;                   /*!< how many charactersitics have been scanned >*/  
+uint8_t char_discovery_success;         /*!< the charactersitic discovery has been finished>*/
+}attr_flags;
 
 
 typedef struct{
@@ -170,12 +180,16 @@ typedef struct{
   uint8_t service_type;                 /*!<Type of service (primary or secondary) */
   uint8_t max_attr_records;             /*!< Maximum number of att-records that can be add to this service*/
   uint8_t n_attr;                       /*!< Control counter of the number of attributes add to this service*/
+  /*include the attribute_flags*/
+  attr_flags attr_flags;
 }app_service_t;
 
 
 typedef struct{
   LIST_STRUCT(_service);
   uint8_t n_service;                  /*!< Control counter of the number of services associate to this application*/
+  /*include the service_flag*/
+  service_flags serv_flags;
 }app_profile_t;
 
 
