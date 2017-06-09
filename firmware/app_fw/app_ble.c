@@ -151,6 +151,8 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
     return APP_ERROR;
   }                          
   profile->n_service+=1; /*increment the control service counter*/
+  profile->serv_flags.services_to_find+=1; /*this flag will be used by the service handler module*/
+  profile->serv_flags.service_discovery_success=0;   /*this flag will be used by the service handler module*/
  return APP_SUCCESS;
 }
 

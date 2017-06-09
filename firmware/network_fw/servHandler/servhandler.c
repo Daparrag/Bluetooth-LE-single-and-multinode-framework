@@ -15,17 +15,18 @@
 /*************************services_handler_config***********************/
 servhandler_conf servhandler_config = {DISC_SERVICE,DISC_CHAR}; /*this is the default configuration of the service handler module*/
 /**************************static functions******************************/
-static void service_handler();
+void service_handler();
 static void set_char_flags(connection_t * connection);
 static void service_error_handler(void);
-static SERV_Status discovery_services();
-static SERV_Status discovery_specific_service();
+static SERV_Status discovery_services(void);
+static SERV_Status DSCV_primary_services_by_uuid(connection_t * connection); /*primitive used for discover services characterized by a specific uuid*/
+static SERV_Status DSCV_char_by_uuid(connection_t * connection);/*primitive used for discover characteristics characterized by a specific uuid*/
 /***********************************************************************/
 
 /**
-  * @brief  This function is called to retrieve the .
-  * @param void.
-  * @retval APP_Status: Value indicating success or error code.
+  * @brief  This function is called to retrieve the service handler configuration.
+  * @param void *config: destination structure.
+  * @retval void
   */
 void get_sv_handler_config(void *config){
 	(servhandler_conf*)config->service_discovery_mode=servhandler_config.service_discovery_mode;
@@ -33,9 +34,9 @@ void get_sv_handler_config(void *config){
 }
 
 /**
-  * @brief  This function is called to retrieve the BLE APP version.
-  * @param void.
-  * @retval APP_Status: Value indicating success or error code.
+  * @brief  This function is called for set up the service handler configuration.
+  * @param void * config: configuration structure.
+  * @retval void: Value indicating success or error code.
   */
 void set_sv_handler_config(void * config){
 	servhandler_conf * user_config = (servhandler_conf *)config;
@@ -48,6 +49,15 @@ void set_sv_handler_config(void * config){
 /*This wil recursively scan for all the services and attributes in the profile structure
 * the user could overwrite this function acording to what it is needed.
 */
+
+/**
+  * @brief  This function describe the services handler behavior you can overwirte this function according to your application requiorements.
+  * @param connection_t * connection: this is the connection structure which contain the services for a specific virtual link througth
+  *									  one master node and one slave node.
+  *
+  * @param net * flags:	event handler flags, for effective control of the service_handler module.  
+  * @retval none
+  */
 void service_handler(connection_t * connection, net * flags){
 SERV_Status ret;
 service_flags service_flag_control = &(connection->Node_profile.serv_flags); 	
@@ -98,7 +108,11 @@ if(connection==NULL || flags==NULL){
 
 }
 
-/*for each_profile*/
+/**
+* @brief  This function is called for discovery a service characterized by an uuid.
+* @param  connection_t * connection: specify the services for this specific connection.
+* @retval SERV_Status: SERV_SUCCESS if operation is success otherwise SERV_ERROR.
+*/
 SERV_Status DSCV_primary_services_by_uuid(connection_t * connection){
 tBleStatus ret;
 uint8_t i;
@@ -147,6 +161,11 @@ serv_control_flags->services_to_find-=1;
 
 }
 
+/**
+* @brief  This function is called for discovery a charateristic given its uuid.
+* @param  connection_t * connection: contain specific characteristics and services for this connection.
+* @retval SERV_Status: SERV_SUCCESS if operation is success otherwise SERV_ERROR.
+*/
 
 /*for each service*/
 SERV_Status DSCV_char_by_uuid(connection_t * connection){
@@ -226,8 +245,19 @@ return  SERV_SUCCESS;
 
 }
 
+/**
+* @brief  This function is called for discovery a services without know their uuid.
+* @param  connection_t * connection: contain specific characteristics and services for this connection.
+* @retval SERV_Status: SERV_SUCCESS if operation is success otherwise SERV_ERROR.
+*/
+SERV_Status discovery_services(void){
+	return  SERV_SUCCESS;
+}
 
-
+/**
+* @brief  This is a control function used in case of service handler error.
+* @retval none.
+*/
 void service_error_handler(void){
 	BSP_LED_Off(LED2);
 	while(1);

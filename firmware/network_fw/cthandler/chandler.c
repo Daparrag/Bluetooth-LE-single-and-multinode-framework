@@ -17,7 +17,6 @@
 
 #define SEG_DELAY 0x03E8 /*1seg delay*/
 #define HALF_SEG_DELAY 0x1F4 /*1/2 seg delay*/
-uint8_t  bnrg_connection_mode =  CONNECTION_ORIENTED;/*the default connection mode*/
 dv_state_t bnrg_device_status = DEVICE_UNITIALIZED; /*device status initialized by default*/
 app_discovery_t * DV_config = NULL;
 app_advertise_t  * AV_config= NULL;
@@ -27,7 +26,6 @@ const config_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, C
 
 
 /******************************Static func************************************************/ 
-static void connection_handler_coriented();
 static void connection_handler_broadcast();
 static void connection_unestablished_toggle(void);
 static void connection_stablished_toggle(void);
@@ -147,6 +145,16 @@ if(connection==NULL || flags==NULL){
 		}
 		break;
 		case ST_STABLISHED:
+		{
+			connection_stablished_toggle();
+		}
+		break;
+		case ST_BROADCAST:
+		{
+			connection_stablished_toggle();
+		}
+		break;
+		case ST_TIME_OUT:
 		{
 			connection_stablished_toggle();
 		}
