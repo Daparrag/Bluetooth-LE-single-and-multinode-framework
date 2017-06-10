@@ -35,7 +35,7 @@ NET_Status net_setup_profile_definition(app_profile_t * profile_def,
 void get_connection_status_by_addrs(uint8_t * slave_addrs, cn_state_t * cstatus);/*return the status of the connection based on the slave address*/
 
 
-void get_services_status_by_addrs(uint8_t * slave_addrs, sv_state_t * cstatus)/*return the service status based on the slave address*/
+void get_services_status_by_addrs(uint8_t * slave_addrs, sv_state_t * cstatus);/*return the service status based on the slave address*/
 
 
 NET_Status network_process(void);/*main network function: running the connection handler and the services handler */

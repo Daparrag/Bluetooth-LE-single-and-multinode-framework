@@ -3,6 +3,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <ble_firmware.h>
+
 #ifdef BLE_APP_CONFIG
 #include "ble_app_conf.h" 
 #endif
@@ -46,16 +47,7 @@
 #define IDB05A1 1
 #endif
 
-/*scan setup default parameters*/
-#ifndef SLNODES
-#define SLNODES		(0x0002)
-#endif
-#ifndef SCAN_INTV
-#define SCAN_INTV   (200)
-#endif
-#ifndef SCAN_WIN
-#define SCAN_WIN	  (5)
-#endif
+
 
 /*advertise default configuration*/
 #ifndef ADV_EVT_TYPE
@@ -111,11 +103,7 @@
 #define SERVICE_TYPE PRIMARY_SERVICE
 #endif
 
-#ifndef LED_TOGGLE_CONFIG
-#define LED_TOGGLE_ADVERTICEMENT     800000
-#define LED_TOGGLE_DISCOVERY         800000
-#define LED_TOGGLE_CONNECTED          30000    
-#endif
+
 
 
 
@@ -142,7 +130,7 @@ APP_Status APP_Init_BLE(void); /*init the BLE_arch*/
 APP_Status APP_init_BLE_Profile(app_profile_t * profile);/*init the BLE app*/
 APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service);/*add BLE services*/
 APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr);/*add BLE attribute*/
-APP_Status APP_set_discovery_BLE(void * dicovery_config);/*this is used for receive advertisements called by clients*/
+//APP_Status APP_set_discovery_BLE(void * dicovery_config);/*this is used for receive advertisements called by clients*/
 APP_Status APP_set_advertise_BLE(void * advertise_conf, 
                                 uint8_t scanres_data_size,
                                 void * scanres_data,

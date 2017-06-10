@@ -29,8 +29,10 @@ static SERV_Status DSCV_char_by_uuid(connection_t * connection);/*primitive used
   * @retval void
   */
 void get_sv_handler_config(void *config){
-	(servhandler_conf*)config->service_discovery_mode=servhandler_config.service_discovery_mode;
-	(servhandler_conf*)config->dsc_sp_char=servhandler_config.dsc_sp_char;
+  servhandler_conf * temp_serv_config =(servhandler_conf *)config;
+  
+  temp_serv_config->serv_disc_mode = servhandler_config.serv_disc_mode;
+  temp_serv_config->char_disc_mode =  servhandler_config.char_disc_mode;
 }
 
 /**
@@ -39,9 +41,11 @@ void get_sv_handler_config(void *config){
   * @retval void: Value indicating success or error code.
   */
 void set_sv_handler_config(void * config){
-	servhandler_conf * user_config = (servhandler_conf *)config;
-	servhandler_config.dsc_sp_services=user_config->dsc_sp_services;
-	servhandler_config.dsc_sp_char=user_config->dsc_sp_char;
+  
+  servhandler_conf * user_config =(servhandler_conf *)config;
+  
+	servhandler_config.serv_disc_mode=user_config->serv_disc_mode;
+	servhandler_config.char_disc_mode=user_config->char_disc_mode;
 } 
 
 
@@ -58,27 +62,27 @@ void set_sv_handler_config(void * config){
   * @param net * flags:	event handler flags, for effective control of the service_handler module.  
   * @retval none
   */
-void service_handler(connection_t * connection, net * flags){
+void service_handler(connection_t * connection, net_flags * flags){
 SERV_Status ret;
-service_flags service_flag_control = &(connection->Node_profile.serv_flags); 	
 /*input verification*/
 if(connection==NULL || flags==NULL){
 	PRINTF("some of the imput parameters on the connection handler is NULL  please verify\n");
 	service_error_handler();
 }
+//uint8_t services_to_find = connection->Node_profile.n_service;
 
 /*profile discovery fsm */
 	switch(connection->connection_status){
 		case ST_READY_TO_INTERCHANGE:
 		{
-			switch(connection_t->service_status){
+			switch(connection->service_status){
 				case ST_SERVICE_DISCOVERY:
 				{
-					if(!(flags->wait_end_procedure) && services_to_find){
+					if(!(flags->wait_end_procedure)){
 						/*discover the remote services.*/
-						if(servhandler_config->serv_disc_mode==FIND_SPE_SERVICE) ret= DSCV_primary_services_by_uuid(connection);
-						if(servhandler_config->serv_disc_mode==FIND_GEN_SERVICE) ret=SERV_SUCCESS;/*not yet implemented*/
-						if(servhandler_config->serv_disc_mode==FIND_GEN_SERVICE) ret=SERV_SUCCESS;/*not yet implemented*/
+						if(servhandler_config.serv_disc_mode==FIND_SPE_SERVICE) ret= DSCV_primary_services_by_uuid(connection);
+						if(servhandler_config.serv_disc_mode==FIND_GEN_SERVICE) ret=SERV_SUCCESS;/*not yet implemented*/
+						if(servhandler_config.serv_disc_mode==DONT_FIND_SERVICE) ret=SERV_SUCCESS;/*not yet implemented*/
 
 						if( ret != SERV_SUCCESS) service_error_handler();
 						flags->wait_end_procedure=1;
@@ -90,9 +94,9 @@ if(connection==NULL || flags==NULL){
 				break;
 				case ST_CHAR_DISCOVERY:
 				{
-					if(flags->wait_end_procedure && char_to_find){
+					if(flags->wait_end_procedure){
 						/* discover the remote characteristics.*/
-						if(servhandler_config->char_disc_mode==FIND_SPE_CHAR)DSCV_char_by_uuid(connection);
+						if(servhandler_config.char_disc_mode==FIND_SPE_CHAR)DSCV_char_by_uuid(connection);
 						flags->wait_end_procedure=1;
 
 					}
@@ -118,20 +122,19 @@ tBleStatus ret;
 uint8_t i;
 uint8_t num_service; 
 app_service_t * service;
-service_flags * serv_control_flags;
+sv_ctrl_flags  *serv_control_flags;
 
-
-serv_control_flags = &(connection->Node_profile.serv_flags);
-num_service = connection->Node_profile.n_service;
+serv_control_flags = &(connection->Node_profile->svflags);
+num_service = connection->Node_profile->n_service;
 
 	if (serv_control_flags->services_to_find!=0 && num_service!=0)
 	{
-		service = (app_service_t *) list_head(connection->Node_profile._service);
+		service = (app_service_t *) list_head(connection->Node_profile->_service);
 		for(i=0;i < num_service-(serv_control_flags->services_to_find); i++ ){
-			service = (app_service_t *)list_item_next((void * service ));
+			service = (app_service_t *)list_item_next((void *) service );
 		}
 
-		if(service=NULL)
+		if(service==NULL)
 		{
  			/*something is wrong*/
  			return SERV_ERROR;
@@ -139,15 +142,15 @@ num_service = connection->Node_profile.n_service;
 
 	}else{
 		/*all services have been success discovered*/
-		serv_control_flags->service_discovery_success=1;
+		serv_control_flags->services_success_scanned=1;
 		return SERV_SUCCESS;
 	}
 
 
 	/*< at this point is possible to send the service discover request >*/
 	ret = aci_gatt_disc_prim_service_by_uuid(connection->Connection_Handle,
-										 service->service_uuid_type,
-										 (uint8_t*)&(service->ServiceUUID));
+                                                 service->service_uuid_type,
+                                                (uint8_t*)&(service->ServiceUUID));
 
 	if(ret != BLE_STATUS_SUCCESS){
 	/*something was wrong*/

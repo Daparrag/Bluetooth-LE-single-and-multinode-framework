@@ -36,11 +36,14 @@ typedef enum device_state{
 DEVICE_UNITIALIZED,				/*!< device_initialized >*/
 DEVICE_DISCOVERY_MODE,			/*!< device set as discovery mode >*/
 DEVICE_ADVERTISEMENT_MODE,		/*!< device set as adverticement mode >*/
-DEVICE_READY,					/*!< device set as ready after connection stablishment >*/
+DEVICE_READY,				/*!< device set as ready after connection stablishment >*/
 DEVICE_NOT_CONNECTED			/*!< device set as not connected after many connetion set up tries>*/
 }dv_state_t;
 
-
+typedef struct{
+  uint8_t services_to_find;
+  uint8_t services_success_scanned;   /*!< flag fire to indicate that all of the services fot this profile had been scanned >*/  
+}sv_ctrl_flags;
 
 typedef struct{
   LIST_STRUCT(_value);
@@ -71,6 +74,7 @@ typedef struct{
 typedef struct{
   LIST_STRUCT(_service);
   uint8_t n_service;                  /*!< Control counter of the number of services associate to this application*/
+  sv_ctrl_flags svflags;                  /*!< in the connection this indicates how many services had been discovered.*/  
 }app_profile_t;
 
 
@@ -113,13 +117,13 @@ uint16_t slconnintervalmax;   /*!<  slave connection interval min value
 
 typedef enum{
 	SERV_SUCCESS=0x00,
-	SERV_ERROR=0x01;
+	SERV_ERROR=0x01
 }SERV_Status;
 
 
 typedef enum service_State{
   ST_SERVICE_DISCOVERY,							/*!< Service Handler in a service discovery mode >*/
-  ST_CHAR_DISCOVERY								/*!< Service Handler in a char discovery mode >*/
+  ST_CHAR_DISCOVERY						        /*!< Service Handler in a char discovery mode >*/
 }sv_state_t;
 
 
@@ -141,10 +145,11 @@ uint8_t char_to_scan;							/*!<among of characteristics to be scanned >*/
 uint8_t char_scanned;							/*!<among of characteristics scanned >*/
 }char_flags;
 
+
 typedef struct{
 sv_hdler_flags flags;							/*service handler event flags*/
 servhandler_conf config;						/*service handler module configuration*/
-}service_t;
+}service_hdl_t;
 
 
 /******************************************CONNECTION HANDLER DEFINITIONS**************************************/
@@ -195,6 +200,8 @@ typedef enum{
 }net_type_t;
 
 
+
+
 typedef struct{ /*single connection structure*/
 uint16_t Connection_Handle;           /*!< define one and only one connection handler x slave  */
 /*NOTE: i guess that this can be part of service datastructure */app_profile_t * Node_profile;  /*!< could be one profile x slave (most convenient)*/
@@ -205,6 +212,7 @@ dv_state_t device_cstatus;            /*!< status of the device for this specifi
 servhandler_conf * sconfig;            /*!< device has a special services configuration(optional) >*/
 cn_state_t connection_status;         /*!< this is the connection status.*/
 sv_state_t service_status;
+
 }connection_t;
 
 

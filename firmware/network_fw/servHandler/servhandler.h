@@ -24,7 +24,7 @@
 
 
 
-void service_handler(connection_t * connection, net * flags);
+void service_handler(connection_t * connection, net_flags * flags);
 
 
 

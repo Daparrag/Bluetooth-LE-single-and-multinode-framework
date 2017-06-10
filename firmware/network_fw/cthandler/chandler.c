@@ -17,16 +17,18 @@
 
 #define SEG_DELAY 0x03E8 /*1seg delay*/
 #define HALF_SEG_DELAY 0x1F4 /*1/2 seg delay*/
+static uint32_t led_toggle_count = 0;
 dv_state_t bnrg_device_status = DEVICE_UNITIALIZED; /*device status initialized by default*/
 app_discovery_t * DV_config = NULL;
 app_advertise_t  * AV_config= NULL;
+const app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
 const config_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
 /************************************Module Flags*****************************************/
 
 
 
 /******************************Static func************************************************/ 
-static void connection_handler_broadcast();
+static void connection_handler_broadcast(void);
 static void connection_unestablished_toggle(void);
 static void connection_stablished_toggle(void);
 static void connection_handler_error(void);
@@ -77,7 +79,7 @@ if(led_toggle_count++ > LED_TOGGLE_UNESTABLISHED)
   */
 void connection_stablished_toggle(void){
 
-if(led_toggle_count++ > LED_TOGGLE_STABLISHED)
+if(led_toggle_count++ > LED_TOGGLE_CONNECTED)
 	{
 		led_toggle_count=0;
 		BSP_LED_Toggle(LED2);
@@ -107,7 +109,7 @@ if(connection==NULL || flags==NULL){
 				case DEVICE_UNITIALIZED:
 				{
 					PRINTF("device unitialized please reinitialize \n");
-					HAL_DELAY(SEG_DELAY);
+					HAL_Delay(SEG_DELAY);
 				}
 				break;
 				case DEVICE_DISCOVERY_MODE:
@@ -130,7 +132,7 @@ if(connection==NULL || flags==NULL){
 						}
 					else if(!(flags->device_found) && !(flags->wait_end_procedure))
 						{/*setup the discovery procedure.*/
-							ret=APP_set_discovery_BLE(DV_config);
+							ret= CH_set_discovery_BLE (DV_config);
 							if(ret != CHADLE_SUCCESS)
 							{
 								PRINTF("error has been occour during the setting the discovery procedure \n");
@@ -219,6 +221,49 @@ CHADLE_Status CH_create_connection_BLE(void *connect_config,
    return CHADLE_SUCCESS;
 }
 
+
+/**
+  * @brief  This function management the node discovery procedure.
+  * @param  void * dicovery_config : user configuration (optional)
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+CHADLE_Status CH_set_discovery_BLE(void * dicovery_config){/*this is used for receive advertisements called by clients*/
+ 
+  tBleStatus ret;
+  app_discovery_t * user_config;
+
+  if(dicovery_config==NULL){
+    /*uses the default configuration*/
+    /*default_config*/
+    ret = aci_gap_start_general_discovery_proc(DV_default_config.sinterval,
+                                                DV_default_config.swindows,
+                                                DV_default_config.ownaddrtype,
+                                                DV_default_config.fduplicates);
+
+  }else{
+    /*uses the user config*/
+    user_config = (app_discovery_t*)dicovery_config;
+    ret = aci_gap_start_general_discovery_proc(user_config->sinterval,
+                                              user_config->swindows,
+                                              user_config->ownaddrtype,
+                                              user_config->fduplicates);
+
+  }
+
+   if (ret != BLE_STATUS_SUCCESS){
+     return CHADLE_ERROR;
+   }
+
+   return CHADLE_SUCCESS;
+
+}
+
+
+
+
+void connection_handler_broadcast(){
+}
 
 
 void connection_handler_error(void){

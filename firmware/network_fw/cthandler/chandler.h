@@ -8,6 +8,8 @@
 #endif
 
 #include <ble_firmware.h>
+#include <stm32f4xx_hal.h>
+#include <app_ble.h>
 #include <debug.h>
 
 
@@ -50,7 +52,26 @@
 #endif
 
 
+/*scan setup default parameters*/
+#ifndef SLNODES
+#define SLNODES		(0x0002)
+#endif
+#ifndef SCAN_INTV
+#define SCAN_INTV   (200)
+#endif
+#ifndef SCAN_WIN
+#define SCAN_WIN	  (5)
+#endif
+
+#ifndef LED_TOGGLE_CONFIG
+#define LED_TOGGLE_UNESTABLISHED     800000
+#define LED_TOGGLE_DISCOVERY         800000
+#define LED_TOGGLE_CONNECTED          30000
+#endif
+
 void connection_handler_coriented (connection_t * connection, net_flags * flags);
+
+CHADLE_Status CH_set_discovery_BLE(void * dicovery_config);
 
 CHADLE_Status CH_create_connection_BLE(void *connect_config, 
                                     uint8_t peer_addrtype, 
