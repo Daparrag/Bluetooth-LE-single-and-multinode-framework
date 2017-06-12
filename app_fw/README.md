@@ -1,9 +1,11 @@
-# Application Firmware
+# Lib
+Some libraries for bluetooth LE synchonization protocol. 
 
-version: 1.0
+## components description
 
-status = uncomplete.
+<img src="https://github.com/Daparrag/Lib/blob/service_handler_branch/screenshots/Components_Structures.PNG" alt="Component Diagram" width="800px" />
 
-# description:
 
-Friendly application firware for the final user BLE applications
+## UseCase diagram
+
+<img src="https://github.com/Daparrag/Lib/blob/service_handler_branch/screenshots/UseCaseDiagram.PNG" alt="Component Diagram" width="800px" />
