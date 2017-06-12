@@ -1,7 +1,6 @@
-#ifndef APP_BLE_H
-#define APP_BLE_H
+#ifndef FIRMWARE_BLE_H
+#define FIRMWARE_BLE_H
 
-/* Includes ------------------------------------------------------------------*/
 #include "cube_hal.h"
 #include "hal_types.h"
 #include "bluenrg_gatt_server.h"
@@ -23,121 +22,20 @@
 #include "stm32_bluenrg_ble.h"
 #include <list.h>
 
-#ifdef BLE_APP_CONFIG
-#include "ble_app_conf.h" 
+/*multinode setup*/
+#ifndef MULTINODE
+#define MULTINODE 			0x0
 #endif
 
-#ifdef DEBUG
-#include "debug.h"
+#ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
+#define EXPECTED_NODES 7					
+#else
+#define EXPECTED_NODES 1
 #endif
-
-/*used the valid roles*/
-/*valid roles
-*GAP_PERIPHERAL_ROLE
-*GAP_BROADCASTER_ROLE
-*GAP_CENTRAL_ROLE
-*GAP_PERIPHERAL_ROLE
-*/
-
-#ifndef CONCAT_AUX
-#define CONCAT_AUX(_x,_y) _x##_y
-#endif
-
-#ifndef CONCAT
-#define CONCAT(x,y) CONCAT_AUX(x, y)
-#endif
-
-#ifndef ROLE
-#define ROLE GAP_CENTRAL_ROLE
-#endif
+//#define MAX_SERVER_ATT_SIZE             0x03
 
 
-
-#define GET_ROLE(arch) ((arch)==0 ? CONCAT(ROLE,_IDB04A1) : CONCAT(ROLE,_IDB05A1))
-
-
-
-/*configuration Variables*/
-#ifndef IDB04A1
-#define IDB04A1 0
-#endif
-
-#ifndef IDB05A1
-#define IDB05A1 1
-#endif
-
-/*scan setup default parameters*/
-#ifndef SLNODES
-#define SLNODES		(0x0002)
-#endif
-#ifndef SCAN_INTV
-#define SCAN_INTV   (200)
-#endif
-#ifndef SCAN_WIN
-#define SCAN_WIN	  (5)
-#endif
-
-/*advertise default configuration*/
-#ifndef ADV_EVT_TYPE
-#define ADV_EVT_TYPE  ADV_IND               /*<!  advertisement event type  >*/
-#endif
-
-#ifndef ADV_IT_MIN
-#define ADV_IT_MIN    (0x00)                /*<!  advertisement interval min  >*/
-#endif
-
-#ifndef ADV_IT_MAX
-#define ADV_IT_MAX    (0x00)                /*<!  advertisement interval max  >*/  
-#endif
-
-#ifndef ADV_ADDR_TYPE
-#define ADV_ADDR_TYPE PUBLIC_ADDR           /*<!  advertisement address type  >*/        
-#endif
-
-#ifndef ADV_POLICY
-#define ADV_POLICY  NO_WHITE_LIST_USE       /*<!  advertisement policy  >*/
-#endif
-
-#ifndef SLAVE_INT_MIN
-#define SLAVE_INT_MIN   (0x00)            /*<!  slave connection interval min  >*/
-#endif
-
-#ifndef SLAVE_INT_MAX
-#define SLAVE_INT_MAX   (0x00)            /*<!  slave connection interval max  >*/
-#endif
-
-
-
-/*device address parameters*/
-/*address setup defaut parameters*/
-#ifndef	CONFIG_DATA_PUBADDR_OFFSET
-#define CONFIG_DATA_PUBADDR_OFFSET     (0x00) /**< Bluetooth public address or random*/
-#endif
-
-#ifndef CONFIG_DATA_PUBADDR_OFFSET
-#define CONFIG_DATA_PUBADDR_LEN		   (6)
-#endif
-
-
-/*Local_Macros*/
-#define MY_HAVE_IDB0xA1(arch, func_name) ((arch) == 1 ?func_name##_IDB05A1:func_name##_IDB04A1)/*concatenation of the funtion name and the architecture*/
-#define BLE_ARCH_MASK 1 /*used for reconize if we have a IDB04A1 or IDB05A1 architecture  BLE_ARCH_MASK is = #architectures -1 */
-
-#ifndef UUID_TYPE
-#define UUID_TYPE UUID_TYPE_128
-#endif
-
-#ifndef SERVICE_TYPE
-#define SERVICE_TYPE PRIMARY_SERVICE
-#endif
-
-#ifndef LED_TOGGLE_CONFIG
-#define LED_TOGGLE_ADVERTICEMENT     800000
-#define LED_TOGGLE_DISCOVERY         800000
-#define LED_TOGGLE_CONNECTED          30000    
-#endif
-
-
+/************************************************APP_BLE DEFINITIONS***************************************/
 typedef enum /*used for return the result of and operation on the application*/
 {
   APP_SUCCESS = 0x00,            /*!< command success applied */
@@ -146,6 +44,27 @@ typedef enum /*used for return the result of and operation on the application*/
 } APP_Status; 
 
 
+/*device status*/
+typedef enum device_state{
+DEVICE_UNITIALIZED,				/*!< device_initialized >*/
+DEVICE_DISCOVERY_MODE,			/*!< device set as discovery mode >*/
+DEVICE_ADVERTISEMENT_MODE,		/*!< device set as adverticement mode >*/
+DEVICE_READY,				/*!< device set as ready after connection stablishment >*/
+DEVICE_NOT_CONNECTED			/*!< device set as not connected after many connetion set up tries>*/
+}dv_state_t;
+
+typedef struct{
+  uint8_t services_to_find;
+  uint8_t services_success_scanned;   /*!< flag fire to indicate that all of the services fot this profile had been scanned >*/  
+}sv_ctrl_flags;
+
+typedef struct{
+uint8_t services_to_scan;						/*!<among of services to be scanned >*/
+uint8_t services_scanned;						/*!<among of services scanned >*/
+uint8_t char_to_scan;							/*!<among of characteristics to be scanned >*/
+uint8_t char_scanned;							/*!<among of characteristics scanned >*/
+uint8_t char_discovery_success;
+}char_flags;
 
 typedef struct{
   LIST_STRUCT(_value);
@@ -170,12 +89,15 @@ typedef struct{
   uint8_t service_type;                 /*!<Type of service (primary or secondary) */
   uint8_t max_attr_records;             /*!< Maximum number of att-records that can be add to this service*/
   uint8_t n_attr;                       /*!< Control counter of the number of attributes add to this service*/
+ 
 }app_service_t;
 
 
 typedef struct{
   LIST_STRUCT(_service);
   uint8_t n_service;                  /*!< Control counter of the number of services associate to this application*/
+  sv_ctrl_flags svflags;                  /*!< in the connection this indicates how many services had been discovered.*/  
+  char_flags chrflags;
 }app_profile_t;
 
 
@@ -214,63 +136,114 @@ uint16_t slconnintervalmax;   /*!<  slave connection interval min value
                                     0xFFFF:not specific max >*/
 }app_advertise_t;
 
+/********************************************SERVICES HANDLER DEFINITIONS*****************************/
 
-/*********************************** connection and network structures *********************/
-#ifdef MULTINODE                    
-#define EXPECTED_NODES 8
-#else
-#define EXPECTED_NODES 1
-#endif
-//#define MAX_SERVER_ATT_SIZE             0x03
+typedef enum{
+	SERV_SUCCESS=0x00,
+	SERV_ERROR=0x01
+}SERV_Status;
 
 
-/*device status*/
-typedef enum device_state{
-DEVICE_UNITIALIZED,
-DEVICE_DISCOVERY_MODE,
-DEVICE_ADVERTISEMENT_MODE,
-DEVICE_READY
-}dv_state_t;
+typedef enum service_State{
+  ST_SERVICE_DISCOVERY,							/*!< Service Handler in a service discovery mode >*/
+  ST_CHAR_DISCOVERY						        /*!< Service Handler in a char discovery mode >*/
+}sv_state_t;
 
+
+typedef struct{
+volatile uint8_t service_discovery;               /*!< this flag is fire when a new service has been discover >*/    
+volatile uint8_t char_discovery;                  /*!< this flag is fire when a new char has been discover >*/
+}sv_hdler_flags;
+
+typedef struct{
+
+  uint8_t serv_disc_mode;						/*!< this flag is setup for enable/disable the services scanning >*/    
+  uint8_t char_disc_mode;						/*!< this flag is setup for enable/disable the characteristic discovery >*/
+}servhandler_conf;
+
+
+typedef struct{
+sv_hdler_flags flags;							/*service handler event flags*/
+servhandler_conf config;						/*service handler module configuration*/
+}service_hdl_t;
+
+
+/******************************************CONNECTION HANDLER DEFINITIONS**************************************/
+
+
+typedef enum /*used for return the result of and operation on the application*/
+{
+  CHADLE_SUCCESS = 0x00,            /*!< command success applied >*/
+  CHADLE_ERROR = 0x01,              /*!< and error occour during the command execution >*/
+} CHADLE_Status; 
 
 /*connection_status*/
 typedef enum connection_State {
-ST_UNESTABLISHED,
-ST_READY_TO_INTERCHANGE,
-ST_STABLISHED,
-ST_DISCOVERY,
-ST_ADVERTISE, 
-ST_CONNECTED_WAIT_CHAR_DISC,
-ST_UNABLE_TO_CONNECT  
+ST_UNESTABLISHED,					/*!< connection unestablished >*/
+ST_READY_TO_INTERCHANGE,			/*!< connection ready to interchange services and characteristics >*/
+ST_STABLISHED,						/*!< connection stablished after discover services and characteristics >*/
+ST_OBSERVER,						/*!< handler the communication as observer node >*/
+ST_BROADCAST, 						/*!< handler the communication as broadcast node >*/
+ST_CONNECTED_WAIT_CHAR_DISC,		/*!< ?¿ >*/
+ST_TIME_OUT  						/*!< the connection exceed the time for stablishement >*/	
 }cn_state_t;
 
-typedef enum service_State{
-  ST_SERVICE_DISCOVERY,
-  ST_CHAR_DISCOVERY
-}sv_state_t;
+typedef struct{/*structure for connection configuration*/
+uint16_t sinterval;               /*!<  Time interval between two LE scans:0x0004-0x4000(period)*/
+uint16_t swindows;                /*!<  Amoung of time for the duration of the LE scan:0x0004-0x4000(length)*/
+//uint8_t peer_addrtype; /*user parameter*/
+//uint8_t peer_addrs [6];/*user parameter*/
+uint8_t ownaddrtype;             /*!<  0x00:public address, 0x01: random device address >*/ 
+uint16_t cintervalmin;           /*!<  minimum value for connection event interval shall be less or equal to  cintervalmax: 0x0006-0x0C80 >*/
+uint16_t cintervalmax;           /*!<  maximum value for connection event interval shall be greater or equal to  cintervalmin: 0x0006-0x0C80>*/
+uint16_t clatency;               /*!<  salve latency for connection in number of connection events:0x0000-0x01F4>*/
+uint16_t stimeout;               /*!<  supervisor time out for LE link: 0x000A-0x0C80>*/
+uint16_t clengthmin;             /*!<  minimum length of connection event needed for LE: 0x0000-0xFFFF time N*0.625ms>*/
+uint16_t clengthmax;             /*!<  maximum length of connection event needed for LE: 0x0000-0xFFFF time N*0.625ms>*/
+}config_connection_t;
+
+
+/***************************************NETWORK MODULE DEFINITIONS******************************************/
+
+typedef enum{
+	NET_SUCCESS=0x00,			/*!< command success applied >*/
+	NET_ERROR=0x01 				/*!< and error occour during the command execution >*/
+}NET_Status;
+
+typedef enum{
+	NET_BROADCAST,				/*!< network module configured as a broadcast >*/
+	NET_CONNECTED				/*!< network module configured as a master-slave >*/
+}net_type_t;
+
+
 
 
 typedef struct{ /*single connection structure*/
 uint16_t Connection_Handle;           /*!< define one and only one connection handler x slave  */
-/*NOTE: i guess that this can be part of service datastructure */app_profile_t Node_profile;           /*!< could be one profile x slave (most convenient)*/
+/*NOTE: i guess that this can be part of service datastructure */app_profile_t * Node_profile;  /*!< could be one profile x slave (most convenient)*/
 uint8_t device_type_addrs;            /*!< slave device addrs type*/
 uint8_t device_address[6];            /*!< device address val*/
-config_connection_t * cconfig;       /*!< device has a special connection configuration(optional) >*/
+config_connection_t * cconfig;        /*!< device has a special connection configuration(optional) >*/
 dv_state_t device_cstatus;            /*!< status of the device for this specific connection*/
-/*NOTE: include the service definition for this connection  */
+servhandler_conf * sconfig;            /*!< device has a special services configuration(optional) >*/
 cn_state_t connection_status;         /*!< this is the connection status.*/
 sv_state_t service_status;
+
 }connection_t;
 
 
-
+/*network module control flags*/
 typedef struct{
-volatile uint8_t device_found;               /*!< this flag is fire when a new device has been found >*/    
+volatile uint8_t new_net_event;               /*!< this flag is fire when new event is setup for the event handler or by the application >*/
+volatile uint8_t device_found;               /*!< this flag is fire when a new device has been found >*/
 volatile uint8_t wait_end_procedure;         /*!< this flag is fire when a procedure is not ended >*/
+volatile uint8_t service_discovery_evt;
+volatile uint8_t attr_discovery_evt;
 volatile uint8_t retry_conn;                 /*!< this flag is fire when a central node requere retry a connection with some pherispheral node>*/  
 }net_flags;
 
 
+/*network high module structure*/
 typedef struct 
 {
   net_flags flags;
@@ -284,43 +257,7 @@ typedef struct
 
 
 
-/*could be removed since the network has to be independent of the node*/
-typedef struct{                     /*central node type structure*/
-  network_t net;
-  dv_state_t central_status;
-}central_node_t;
+/***************************************************************************************************/
 
 
-typedef struct{                    /* simple pherisperal node type structure*/
-  dv_state_t pherispheral_status;
-}spherispheral_node_t;
-
-typedef central_node_t broadcast_node_t; /*broadcast node type structure*/
-typedef spherispheral_node_t observer_node_t;  /*observer node type structure*/
-typedef central_node_t cpherispheral_node_t; /*complex pherispheral node*/
-
-
-/**
-* global_func_declaration
-*/
-APP_Status APP_Init_BLE(void); /*init the BLE_arch*/
-APP_Status APP_init_BLE_Profile(app_profile_t * profile);/*init the BLE app*/
-APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service);/*add BLE services*/
-APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr);/*add BLE attribute*/
-APP_Status APP_set_discovery_BLE(void * dicovery_config);/*this is used for receive advertisements called by clients*/
-APP_Status APP_set_advertise_BLE(void * advertise_conf, 
-                                uint8_t scanres_data_size,
-                                void * scanres_data,
-                                uint8_t serviceuuidlength, 
-                                void * serviceuuidlist);/*server generate advertisements to clients*/
-//APP_Status APP_create_connection_BLE(void *connect_config, 
-//                                    uint8_t peer_addrtype, 
-//                                    void * peer_addrs);/*used by setup connection by the master node*/
-
-void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise); /*used for retrieve the default config*/
-
-int APP_get_addrs_BLE(void * addrs);/*used for retrieve the address of the BLE device*/
-
-int APP_get_name_BLE(void * name); /*used for retrieve the name of the BLE device*/
-
-#endif /* PTP_BLE_H */
+#endif /* NET_BLE_H*/

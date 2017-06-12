@@ -5,14 +5,12 @@
 #include <app_ble.h>
 #include <list.h>
 
-
-
 /**********************Local Variables***********************/
 uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
 uint8_t  bnrg_expansion_board =  IDB04A1;
 const uint8_t DEVICE_BDADDR[] =  { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1 }; /*device addrs*/
 const char local_name[] = {AD_TYPE_COMPLETE_LOCAL_NAME,'B','L','E','-','U','N','O'}; /*device name*/
-const app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
+//const app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
 //const app_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
 const app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
 /************************************************************/
@@ -183,45 +181,6 @@ APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
     }  
     service->n_attr+=1;
     return APP_SUCCESS;
-}
-
-
-
-/**
-  * @brief  This function management the node discovery procedure.
-  * @param  void * dicovery_config : user configuration (optional)
-  * @retval APP_Status: Value indicating success or error code.
-  */
-
-APP_Status APP_set_discovery_BLE(void * dicovery_config){/*this is used for receive advertisements called by clients*/
- 
-  tBleStatus ret;
-  app_discovery_t * user_config;
-
-  if(dicovery_config==NULL){
-    /*uses the default configuration*/
-    /*default_config*/
-    ret = aci_gap_start_general_discovery_proc(DV_default_config.sinterval,
-                                                DV_default_config.swindows,
-                                                DV_default_config.ownaddrtype,
-                                                DV_default_config.fduplicates);
-
-  }else{
-    /*uses the user config*/
-    user_config = (app_discovery_t*)dicovery_config;
-    ret = aci_gap_start_general_discovery_proc(user_config->sinterval,
-                                              user_config->swindows,
-                                              user_config->ownaddrtype,
-                                              user_config->fduplicates);
-
-  }
-
-   if (ret != BLE_STATUS_SUCCESS){
-     return APP_ERROR;
-   }
-
-   return APP_SUCCESS;
-
 }
 
 /**
