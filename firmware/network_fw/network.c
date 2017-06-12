@@ -11,7 +11,7 @@
 *	4. receives events notification from the event_handler or application parameters (we can implement and event queue but this is so advance for this application but could be introduce an efficient resouce management)
 */
 #include <network.h>
-/*****************************macros**********************************************
+/*****************************macros**********************************************/
 
 /*********************Static func************************/
 static void init_connection_handler(void);
@@ -23,7 +23,13 @@ network_t network;
 /*********************************************************/
 
 NET_Status init_network(net_type_t net_type, network_t * net_output){
-network.flags={0,0,0,0};/*initialized the network flags*/
+/*initialized the network flags*/
+network.flags.new_net_event=0;
+network.flags.device_found=0;
+network.flags.wait_end_procedure=0;
+network.flags.service_discovery_evt=0;
+network.flags.attr_discovery_evt=0;
+network.flags.retry_conn=0;
 /*here it is possible to setup different configurations based on the network type*/
 net_mode = net_type;
 init_connection_handler();
@@ -39,7 +45,12 @@ void init_connection_handler(void){
 uint8_t i;
 
 #ifdef MULTINODE
-for(i=0; i <= EXPECTED_NODES; i++)network.mMSConnection[i].connection_status = ST_UNESTABLISHED;
+for(i=0; i <  EXPECTED_NODES; i++)   
+  network.mMSConnection[i].connection_status =  ST_UNESTABLISHED;
+
+                                    
+
+//network.mMSConnection[i].connection_status = ST_UNESTABLISHED;
 #else
 network.mMSConnection.connection_status = ST_UNESTABLISHED;
 #endif
@@ -166,7 +177,7 @@ void get_connection_status_by_addrs(uint8_t * slave_addrs, cn_state_t * cstatus)
 		return;
 	}
 #ifdef MULTINODE
-	cstatus = &network.mMSConnection[i].connection_status; 
+	cstatus = &network.mMSConnection[index].connection_status; 
 #else
 	cstatus = &network.mMSConnection.connection_status;
 #endif	
@@ -187,7 +198,7 @@ if(index==-1){
 	}
 
 #ifdef MULTINODE
-	cstatus = &network.mMSConnection[i].service_status; 
+	cstatus = &network.mMSConnection[index].service_status; 
 #else
 	cstatus = &network.mMSConnection.service_status;
 #endif	

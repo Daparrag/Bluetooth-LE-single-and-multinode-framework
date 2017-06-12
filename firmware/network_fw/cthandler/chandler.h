@@ -14,13 +14,6 @@
 
 
 
-
-/*multinode setup*/
-#ifndef MULTINODE
-#define MULTINODE 			0x0
-#endif
-
-
 /*connection setup default parameters*/
 #ifndef SCAN_P
 #define SCAN_P  		(0x0028)      		             /*!< Scan Interval 40ms.*/			

@@ -178,31 +178,31 @@ uint8_t num_char;
 uint8_t num_services; 
 app_attr_t * charac;
 app_service_t * service;
-attr_flags * attr_control_flags;
+char_flags * attr_control_flags;
 
 
-
-num_service = connection->Node_profile.n_service;
+attr_control_flags= &(connection->Node_profile->chrflags);
+num_services = connection->Node_profile->n_service;
 /*step 1. get the correct service*/
 	
-	if(attr_control_flags->services_scanned < num_services) 
-		&& num_service!=0)
+	if((attr_control_flags->services_scanned < num_services) 
+		&& num_services!=0)
 	{
 
-		service = (app_service_t *) list_head(connection->Node_profile._service);
+		service = (app_service_t *) list_head(connection->Node_profile->_service);
 
-		for(i=0; i < services_scanned; i ++){
+		for(i=0; i < attr_control_flags->services_scanned; i ++){
 			service = (app_service_t *)list_item_next((void *) service); 
 		}
 
-		if(service=NULL){
+		if(service==NULL){
 	 	/*something is wrong*/
 	 	return SERV_ERROR;
 	 	}
 		/*at this point we have got the correct service*/
 	 }else{
 	 	/*all attributes have been  discovered*/
-	 	attr_control_flags->char_discovery_success;
+	 	attr_control_flags->char_discovery_success=1;
 	 	attr_control_flags->char_scanned=0;
 	 	return SERV_SUCCESS;
 	 }
@@ -213,19 +213,19 @@ num_service = connection->Node_profile.n_service;
 		&& num_char!=0)
 	{
 
-		charac = (app_attr_t *)list_head(service._attr);
+		charac = (app_attr_t *)list_head(service->_attr);
 
 		for(i=0; i < attr_control_flags->char_scanned; i ++){
-			charac = (app_attr_t *) list_item_next((void *) service);
+			charac = (app_attr_t *) list_item_next((void *) charac);
 		}
 
-		if(charac=NULL){
+		if(charac==NULL){
  			/*something is wrong*/
  		return SERV_ERROR;
  		}
  	}else{
  		/*characteristics already included*/
-		char_flags->services_scanned+=1;
+		attr_control_flags->services_scanned+=1;
 		return SERV_SUCCESS;
 	}	
 
@@ -242,7 +242,7 @@ if(ret != BLE_STATUS_SUCCESS){
 return SERV_ERROR;
 }
 
-char_flags->char_scanned+=1;
+attr_control_flags->char_scanned+=1;
 /*a characteristic have been discovered*/
 return  SERV_SUCCESS;
 

@@ -22,6 +22,19 @@
 #include "stm32_bluenrg_ble.h"
 #include <list.h>
 
+/*multinode setup*/
+#ifndef MULTINODE
+#define MULTINODE 			0x0
+#endif
+
+#ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
+#define EXPECTED_NODES 7					
+#else
+#define EXPECTED_NODES 1
+#endif
+//#define MAX_SERVER_ATT_SIZE             0x03
+
+
 /************************************************APP_BLE DEFINITIONS***************************************/
 typedef enum /*used for return the result of and operation on the application*/
 {
@@ -46,6 +59,14 @@ typedef struct{
 }sv_ctrl_flags;
 
 typedef struct{
+uint8_t services_to_scan;						/*!<among of services to be scanned >*/
+uint8_t services_scanned;						/*!<among of services scanned >*/
+uint8_t char_to_scan;							/*!<among of characteristics to be scanned >*/
+uint8_t char_scanned;							/*!<among of characteristics scanned >*/
+uint8_t char_discovery_success;
+}char_flags;
+
+typedef struct{
   LIST_STRUCT(_value);
   uint8_t CharUUID[16];            /*!< Control characteristic UUID.*/
   uint8_t charUuidType;            /*!< Control characteristic UUID_TYPE. 16 or 128 bits*/   
@@ -68,6 +89,7 @@ typedef struct{
   uint8_t service_type;                 /*!<Type of service (primary or secondary) */
   uint8_t max_attr_records;             /*!< Maximum number of att-records that can be add to this service*/
   uint8_t n_attr;                       /*!< Control counter of the number of attributes add to this service*/
+ 
 }app_service_t;
 
 
@@ -75,6 +97,7 @@ typedef struct{
   LIST_STRUCT(_service);
   uint8_t n_service;                  /*!< Control counter of the number of services associate to this application*/
   sv_ctrl_flags svflags;                  /*!< in the connection this indicates how many services had been discovered.*/  
+  char_flags chrflags;
 }app_profile_t;
 
 
@@ -137,13 +160,6 @@ typedef struct{
   uint8_t serv_disc_mode;						/*!< this flag is setup for enable/disable the services scanning >*/    
   uint8_t char_disc_mode;						/*!< this flag is setup for enable/disable the characteristic discovery >*/
 }servhandler_conf;
-
-typedef struct{
-uint8_t services_to_scan;						/*!<among of services to be scanned >*/
-uint8_t services_scanned;						/*!<among of services scanned >*/
-uint8_t char_to_scan;							/*!<among of characteristics to be scanned >*/
-uint8_t char_scanned;							/*!<among of characteristics scanned >*/
-}char_flags;
 
 
 typedef struct{

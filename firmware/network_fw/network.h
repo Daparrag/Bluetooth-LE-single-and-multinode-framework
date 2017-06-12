@@ -8,12 +8,8 @@
 #include <servhandler.h>
 
 
-#ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
-#define EXPECTED_NODES 7					
-#else
-#define EXPECTED_NODES 1
-#endif
-//#define MAX_SERVER_ATT_SIZE             0x03
+
+
 
 
 typedef enum{
