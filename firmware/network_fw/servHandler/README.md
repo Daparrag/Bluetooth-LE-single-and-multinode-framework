@@ -2,7 +2,7 @@
 
 version 1.0
 
-status: uncomplete
+status: uncompleted
 
 ## task:
 

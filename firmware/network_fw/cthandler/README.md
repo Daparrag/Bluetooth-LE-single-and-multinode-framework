@@ -1,7 +1,11 @@
 # Connection Handler
 
 connection handler 
+
  version 1.0
+ 
+ status: uncompleted
+ 
 ## task:
  -Connection stablishment single or multiple connections  
   according to the network topology.

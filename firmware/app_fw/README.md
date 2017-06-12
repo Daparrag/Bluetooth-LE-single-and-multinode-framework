@@ -1,11 +1,16 @@
-# Lib
-Some libraries for bluetooth LE synchonization protocol. 
+# application firmware
 
-## components description
+firmware for BLE app_layer (single node specification)
 
-<img src="https://github.com/Daparrag/Lib/blob/service_handler_branch/screenshots/Components_Structures.PNG" alt="Component Diagram" width="800px" />
+Version 1.0
 
+status : uncompleted
 
-## UseCase diagram
+## task
 
-<img src="https://github.com/Daparrag/Lib/blob/service_handler_branch/screenshots/UseCaseDiagram.PNG" alt="Component Diagram" width="800px" />
+1) start the BLE device
+2) setup and create diferent profiles for multiple conection.
+3) management as a mutual sclusive each profile per connection.
+ 
+global procedures common to any application 
+
