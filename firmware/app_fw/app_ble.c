@@ -270,28 +270,69 @@ void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void *
 }
 
 
+
 /**
-  * @brief  This function management the connection setup procedure.
-  * @param  void * name (used for catch the device name)
-  * @retval name_length: the length of the name
+  * @brief  This function return pointer to the device name.
+  * @param int * size (used for catch the device name size)
+  * @retval void *: void pointer to the name.
   */
 
-int APP_get_name_BLE(void * name){
-  return 0;
+void * APP_get_direct_name_BLE(int * size){
+  *size = sizeof(local_name);
+  return (void *)&(local_name);
+}
 
+
+
+/**
+  * @brief  This function return pointer to the device address.
+  * @param int * size (used for catch the device address size)
+  * @retval void *: void pointer to the address. 
+  */
+
+void * APP_get_direct_addrs_BLE(int * size){
+    *size = sizeof(DEVICE_BDADDR);
+  return (void *)&(DEVICE_BDADDR);  
 }
 
 
 /**
-  * @brief  This function management the connection setup procedure.
-  * @param  void * addrs (used for catch the device name)
-  * @retval addrs_length: the length of the address
+  * @brief  This function retreve the services presents in the profile.
+  * @param app_profile_t * profile: profile which contain the services
+  * @param app_profile_t * service: pointer used to retreve the serivices in the profile
+  * @APP_Status: Value indicating success or error code.
   */
 
-
-int APP_get_addrs_BLE(void * addrs){
-  return 0;
-
-
+APP_Status APP_get_service_BLE(app_profile_t * profile, app_service_t ** service){
+  
+  if(profile==NULL) return APP_ERROR;
+  
+  if(service==NULL)service = (app_service_t *) list_head(profile->_service);
+  else service = &(app_service_t *) list_item_next((void *) service);
+  
+  return APP_SUCCESS;
+  
 }
+
+
+/**
+  * @brief  This function retreve the services presents in the profile.
+  * @param app_service_t * service: service which contain a set of attributes
+  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
+  * @APP_Status: Value indicating success or error code.
+  */
+
+APP_Status APP_get_attribute_BLE(app_service_t * service, app_attr_t *attr){
+  
+  if(service==NULL) return APP_ERROR;
+  
+  if(attr==NULL) attr = (app_attr_t *)list_head(service->_attr);
+  else attr = (app_attr_t *) list_item_next((void *) attr);
+  
+    return APP_SUCCESS;
+  
+}
+
+
+
 

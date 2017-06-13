@@ -140,10 +140,19 @@ APP_Status APP_set_advertise_BLE(void * advertise_conf,
 //                                    uint8_t peer_addrtype, 
 //                                    void * peer_addrs);/*used by setup connection by the master node*/
 
+APP_Status APP_get_service_BLE(app_profile_t * profile, app_service_t ** service);
+
+APP_Status APP_get_attribute_BLE(app_service_t * service, app_attr_t *attr);
+
+
 void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise); /*used for retrieve the default config*/
 
-int APP_get_addrs_BLE(void * addrs);/*used for retrieve the address of the BLE device*/
 
-int APP_get_name_BLE(void * name); /*used for retrieve the name of the BLE device*/
+void * APP_get_direct_addrs_BLE(int * size);/* used for retreive the addrs of the BLE device*/
+
+void * APP_get_direct_name_BLE(int * size); /*used for retrieve the name of the BLE device*/
+
+
+
 
 #endif /* PTP_BLE_H */
