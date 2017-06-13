@@ -213,7 +213,7 @@ num_services = connection->Node_profile->n_service;
 		&& num_char!=0)
 	{
 
-		charac = (app_attr_t *)list_head(service->_attr);
+		charac = NULL;//(app_attr_t *)list_head(service->_attr);
 
 		for(i=0; i < attr_control_flags->char_scanned; i ++){
 			charac = (app_attr_t *) list_item_next((void *) charac);

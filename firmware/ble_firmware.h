@@ -81,7 +81,8 @@ typedef struct{
 }app_attr_t;
 
 
-typedef struct{
+
+struct _app_service_t{
   LIST_STRUCT(_attr);
   uint8_t ServiceUUID[16];              /*!<Control service UUID.*/
   uint16_t ServiceHandle;               /*!< Service handle.*/
@@ -89,8 +90,12 @@ typedef struct{
   uint8_t service_type;                 /*!<Type of service (primary or secondary) */
   uint8_t max_attr_records;             /*!< Maximum number of att-records that can be add to this service*/
   uint8_t n_attr;                       /*!< Control counter of the number of attributes add to this service*/
- 
-}app_service_t;
+  uint8_t attr_list_init;
+  struct _app_service_t * next_service; 
+};
+
+
+typedef struct _app_service_t app_service_t;
 
 
 typedef struct{
@@ -98,6 +103,7 @@ typedef struct{
   uint8_t n_service;                  /*!< Control counter of the number of services associate to this application*/
   sv_ctrl_flags svflags;                  /*!< in the connection this indicates how many services had been discovered.*/  
   char_flags chrflags;
+  app_service_t * services;
 }app_profile_t;
 
 
