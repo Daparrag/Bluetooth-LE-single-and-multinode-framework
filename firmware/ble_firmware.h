@@ -66,8 +66,7 @@ uint8_t char_scanned;							/*!<among of characteristics scanned >*/
 uint8_t char_discovery_success;
 }char_flags;
 
-typedef struct{
-  LIST_STRUCT(_value);
+struct _app_attr_t{
   uint8_t CharUUID[16];            /*!< Control characteristic UUID.*/
   uint8_t charUuidType;            /*!< Control characteristic UUID_TYPE. 16 or 128 bits*/   
   uint8_t charValueLen;            /*!< Current length of the characteristic description*/
@@ -78,20 +77,20 @@ typedef struct{
   uint8_t isVariable;             /*!< 0x00:fixed attr length 0x01:var attr length*/
   uint16_t CharHandle;             /*!< characteristic handle.*/
   uint8_t n_val;                  /*!< control counter of the number of values associate to this characteristic */
-}app_attr_t;
+  struct _app_attr_t * next_attr;
+};
 
-
+typedef struct _app_attr_t app_attr_t;
 
 struct _app_service_t{
-  LIST_STRUCT(_attr);
   uint8_t ServiceUUID[16];              /*!<Control service UUID.*/
   uint16_t ServiceHandle;               /*!< Service handle.*/
   uint8_t service_uuid_type;            /*!<Control service UUID_TYPE. 16 or 128 bits*/
   uint8_t service_type;                 /*!<Type of service (primary or secondary) */
   uint8_t max_attr_records;             /*!< Maximum number of att-records that can be add to this service*/
   uint8_t n_attr;                       /*!< Control counter of the number of attributes add to this service*/
-  uint8_t attr_list_init;
-  struct _app_service_t * next_service; 
+  struct _app_service_t * next_service;
+  app_attr_t * attrs;
 };
 
 

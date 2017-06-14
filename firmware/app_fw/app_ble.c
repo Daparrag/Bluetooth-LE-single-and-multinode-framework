@@ -123,40 +123,41 @@ APP_Status APP_Init_BLE(void){/*can be used by any application*/
   */
 
 APP_Status APP_init_BLE_Profile(app_profile_t * profile){
-   LIST_STRUCT_INIT(profile,_service);
     profile->n_service=0;
-    
     return APP_SUCCESS;
 }
 
 
 /**
   * @brief  This function is called to add any Service.
-  * @param  service_uuid: Service uuid value.
-  * @param  service_handle: Pointer to a variable in which the service handle will be saved.
+  * @param  app_profile_t * profile: Profilinf structure.
+  * @param  app_service_t * service: service to include.
   * @retval APP_Status: Value indicating success or error code.
   */
 
 APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service){
   tBleStatus ret;
-  app_service_t * aux_service;
-  if(service==NULL)return APP_ERROR;
+  app_service_t ** aux_service_addrs;
+  if(profile == NULL || service==NULL)return APP_ERROR; /*it's not acepted input NULL*/
+ 
   if(profile->services==NULL)
-    {
+    {/*if this is the first service to include included*/
       profile->services=service;
-    } else if(profile->services!=service){
-      aux_service = profile->services;
+    } else if(profile->services!=service){/*if not check that it is not already included*/
+        aux_service_addrs = &profile->services;
        do{
-            aux_service=aux_service->next_service;
-            if(aux_service==service)break;/*service already included for this profile*/
-         }while(aux_service!=NULL);
+            aux_service_addrs = &((*aux_service_addrs)->next_service);
+            //aux_service= aux_service->next_service;
+            if(*aux_service_addrs==service)break;/*service already included for this profile*/
+         }while(*aux_service_addrs!=NULL);
       
-       if(aux_service==NULL){
-          aux_service=service;
-       }
-    }else if (profile->services == service  || aux_service == service)return APP_ERROR;
-  //LIST_STRUCT_INIT(service,_attr); /*Initialized the attribute list associate to this service*/
-  //list_add(profile->_service, service); /*Add the new service at the list of services*/
+       
+       if(*aux_service_addrs==NULL){
+          *aux_service_addrs = service;
+       }else if(*aux_service_addrs == service)return APP_ERROR;
+       
+    }else if (profile->services == service)return APP_ERROR; /*if service is already included return error*/
+  /*send the add service command  BULENRG-MS*/
   ret = aci_gatt_add_serv(service->service_uuid_type,
                           service->ServiceUUID,
                           service->service_type,
@@ -167,12 +168,6 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
     /*remove the service form the list list_chop*/
     return APP_ERROR;
   }
-  
-  if(!service->attr_list_init){
-   
-    service->attr_list_init=1;  
-  }
-
   profile->n_service+=1; /*increment the control service counter*/
  return APP_SUCCESS;
 }
@@ -185,12 +180,28 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
   */
 APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
     tBleStatus ret;
-
+    app_attr_t ** aux_attr_addrs;
+    if(service== NULL || attr == NULL  ) return APP_ERROR; /*it's not acepted input NULL*/
     
-    LIST_STRUCT_INIT(attr,_value);
-   //LIST_STRUCT_INIT2(service,_attr); /*Initialized the attribute list associate to this service*/
-   list_add(service->_attr,attr);
+    if(service->attrs==NULL){
+        service->attrs = attr; /*this is the first attrubute associated to this service*/
+    }else if (service->attrs != attr){
+      /*if this entry is not already included*/
+        aux_attr_addrs = &service->attrs;
+         do{
+           
+            aux_attr_addrs = & ((*aux_attr_addrs)->next_attr);
+            if(*aux_attr_addrs==attr)break;/*service already included for this profile*/
+            
+         }while(*aux_attr_addrs!=NULL);
+         
+       if(*aux_attr_addrs==NULL){
+          *aux_attr_addrs=attr;/*if this attribute is  not already included add it to the list of attributes*/
+       }else if(*aux_attr_addrs==attr) return APP_ERROR;  
+         
+    }else if (service->attrs ==  attr )  return APP_ERROR;
     
+   /*send the add attr command  BULENRG-MS*/
     ret = aci_gatt_add_char(service->ServiceHandle,
                           attr->charUuidType, 
                           attr->CharUUID, 
@@ -331,16 +342,16 @@ void * APP_get_direct_addrs_BLE(int * size){
   * @APP_Status: Value indicating success or error code.
   */
 
-void * APP_get_service_BLE(app_profile_t * profile, void * serv){
-  app_service_t * temp_service;
+void * APP_get_service_BLE(app_profile_t * profile, void  * serv){
+  app_service_t * temp_service = (app_service_t *) serv;
 
   if(profile == NULL) return NULL;
   
   if(serv == NULL){
-     temp_service = (app_service_t *) list_head(profile->_service);
+     temp_service = (app_service_t *) profile->services;
   }else 
   {
-    temp_service = list_item_next((void *)serv);
+    temp_service = (app_service_t *) temp_service->next_service;
   }
   
   return temp_service;
@@ -356,12 +367,12 @@ void * APP_get_service_BLE(app_profile_t * profile, void * serv){
   */
 
 void * APP_get_attribute_BLE(app_service_t * service, void *attr){
-  app_attr_t * temp_att;
+  app_attr_t * temp_att = (app_attr_t*) attr;
   
   if(service==NULL) return NULL;
   
-  if(attr==NULL) temp_att = list_head(service->_attr);
-  else temp_att = list_item_next((void *) attr);
+  if(attr==NULL) temp_att = (app_attr_t *) service->attrs;
+  else temp_att = (app_attr_t *) temp_att->next_attr;
   
   return temp_att;
 
