@@ -70,6 +70,11 @@ CHADLE_Status CH_create_connection_BLE(void *connect_config,
                                     uint8_t peer_addrtype, 
                                     void * peer_addrs);/*used by setup connection by the master node*/
 
+CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config);
+
+CHADLE_Status CH_set_discovery_limited_BLE(void * dicovery_config);
+
+
 
 #endif /* CONNECTION_HANDLER_BLE_H */
 /**/

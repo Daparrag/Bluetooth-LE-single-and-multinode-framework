@@ -22,6 +22,14 @@
 #include "stm32_bluenrg_ble.h"
 #include <list.h>
 
+/*copy macro*/
+
+#ifndef COPY_VAR
+#define COPY_VAR(dest,source) memcpy(dest,(void*)source,sizeof((source)))
+#endif
+
+
+
 /*multinode setup*/
 #ifndef MULTINODE
 #define MULTINODE 			0x0
@@ -44,11 +52,20 @@ typedef enum /*used for return the result of and operation on the application*/
 } APP_Status; 
 
 
+typedef enum device_type{
+  DEVICE_PHERISPHERAL,
+  DEVICE_CENTRAL,
+  DEVICE_BROADCASTER,
+  DEVICE_OBSERVER
+}dv_type_t;
+
 /*device status*/
 typedef enum device_state{
 DEVICE_UNITIALIZED,				/*!< device_initialized >*/
 DEVICE_DISCOVERY_MODE,			/*!< device set as discovery mode >*/
 DEVICE_ADVERTISEMENT_MODE,		/*!< device set as adverticement mode >*/
+DEVICE_SCAN_MODE,		        /*!< device set as scan mode >*/
+DEVICE_READY_TO_INTERCHANGE,
 DEVICE_READY,				/*!< device set as ready after connection stablishment >*/
 DEVICE_NOT_CONNECTED			/*!< device set as not connected after many connetion set up tries>*/
 }dv_state_t;
@@ -185,7 +202,6 @@ typedef enum /*used for return the result of and operation on the application*/
 /*connection_status*/
 typedef enum connection_State {
 ST_UNESTABLISHED,					/*!< connection unestablished >*/
-ST_READY_TO_INTERCHANGE,			/*!< connection ready to interchange services and characteristics >*/
 ST_STABLISHED,						/*!< connection stablished after discover services and characteristics >*/
 ST_OBSERVER,						/*!< handler the communication as observer node >*/
 ST_BROADCAST, 						/*!< handler the communication as broadcast node >*/

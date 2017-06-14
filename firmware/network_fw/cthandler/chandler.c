@@ -125,14 +125,11 @@ if(connection==NULL || flags==NULL){
 							}
 							/*update_flag*/
 							flags->device_found=0;
-							connection->connection_status = ST_READY_TO_INTERCHANGE;
-							connection->device_cstatus=DEVICE_READY;
-
-
+							
 						}
 					else if(!(flags->device_found) && !(flags->wait_end_procedure))
 						{/*setup the discovery procedure.*/
-							ret= CH_set_discovery_BLE (DV_config);
+							ret= CH_set_discovery_BLE (DV_config);/*issue*/
 							if(ret != CHADLE_SUCCESS)
 							{
 								PRINTF("error has been occour during the setting the discovery procedure \n");
@@ -222,8 +219,39 @@ CHADLE_Status CH_create_connection_BLE(void *connect_config,
 }
 
 
+
 /**
-  * @brief  This function management the node discovery procedure.
+  * @brief  This function management the node discovery procedure(for limited discoverable devices).
+  * @param  void * dicovery_config : user configuration (optional)
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config){/*this is used for receive advertisements called only by limited discoverable devices*/
+   
+     return CHADLE_SUCCESS;
+}
+
+
+
+
+
+/**
+  * @brief  This function management the node discovery procedure(for specific device).
+  * @param  void * dicovery_config : user configuration (optional)
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+CHADLE_Status CH_set_discovery_limited_BLE(void * dicovery_config){/*this is used for receive advertisements called by an specific client identified by an UUID*/
+
+     return CHADLE_SUCCESS;
+}
+
+
+
+
+
+/**
+  * @brief  This function management the node discovery procedure(general discoverable procedure).
   * @param  void * dicovery_config : user configuration (optional)
   * @retval APP_Status: Value indicating success or error code.
   */
