@@ -62,7 +62,7 @@
 #define LED_TOGGLE_CONNECTED          30000
 #endif
 
-void connection_handler_coriented (connection_t * connection, net_flags * flags);
+void connection_handler_coriented (connection_t * connection, event_t * event);
 
 CHADLE_Status CH_set_discovery_BLE(void * dicovery_config);
 

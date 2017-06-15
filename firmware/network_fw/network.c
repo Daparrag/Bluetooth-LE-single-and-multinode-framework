@@ -20,6 +20,9 @@ static void init_device(void);
 static int get_connection_index_by_addrs(uint8_t * addrs);
 static void Get_Device_From_Conn_Handle(uint16_t conn_handler);
 static uint8_t verify_Conn_Handle (uint16_t handle, uint8_t *index);
+static void NET_Get_currentConnection_CB(connection_t * connection);
+NET_Status NET_DisconnectionComplete_CB(uint16_t conn_handle);
+/****************** Variable Declaration **************************/
 net_type_t    net_mode =  NET_CONNECTED;/*the default connection mode*/
 dv_type_t     device_role = DEVICE_CENTRAL; /*by default the devices will be cental*/
 net_status_t  net_status = NET_NOT_INITIALIZED;
@@ -263,10 +266,60 @@ void network_set_event(void){
 
 }
 
-NET_Status network_process(){
+NET_Status network_process(void){/*the idea is to  include all the network  events and dispach appropiately*/
+event_t * event;
+connection_t * connection;
+
+	if(new_event(event)){
+		switch(event->event_type)
+		{   /*events related with the connection handler*/
+			case EVT_DISCONN_COMPLETE:
+			{
+				evt_disconn_complete *evt = (evt_disconn_complete *)event->event_data.data;
+				NET_DisconnectionComplete_CB(evt->handle);
+			}
+			break;
+
+			case EVT_LE_CONN_COMPLETE:
+			{
+				NET_Get_currentConnection_CB(connection);
+					if(connection!=NULL)connection_handler_coriented(connection,event);
+
+			}
+			break;
+
+			case EVT_LE_ADVERTISING_REPORT:
+			{
+			 	NET_Get_currentConnection_CB(connection);
+			 	if(connection!=NULL)connection_handler_coriented(connection,event);
+			}
+			break;
+			/*events related with the service handler*/
+			case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
+			{
+
+			}
+			break;
+
+			case EVT_BLUE_ATT_FIND_BY_TYPE_VAL_RESP:
+			{
+
+			}
+			break;
+
+			case EVT_BLUE_GATT_DISC_READ_CHAR_BY_UUID_RESP:
+			{
+
+			}
+			break;
 
 
-	return NET_SUCCESS;
+		}
+	}else{
+		connection_handler_coriented(connection,NULL); 
+	}
+
+
 }
 
 
@@ -322,6 +375,24 @@ uint8_t i;
  * @param  The connection handle
  * @retval None
  */
+
+void NET_Get_currentConnection_CB(connection_t * connection){
+
+	uint8_t i;
+	cn_state_t connection_status;
+#ifdef MULTINODE
+	uint8_t index = network.num_device_found;
+	connection_status =  network.mMSConnection[index].connection_status;
+	
+	if(connection_status!=ST_STABLISHED) connection = &network.mMSConnection[index];
+	else connection = NULL;
+#else
+	connection_status =  network.mMSConnection.connection_status;
+	if(connection_status!=ST_STABLISHED)connection = &network.mMSConnection;
+	else connection = NULL;
+#endif	
+
+}
 
 NET_Status NET_DisconnectionComplete_CB(uint16_t conn_handle){
   

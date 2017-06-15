@@ -73,7 +73,7 @@ if(connection==NULL || flags==NULL){
 
 /*profile discovery fsm */
 	switch(connection->connection_status){
-		case ST_READY_TO_INTERCHANGE:
+		case ST_STABLISHED:/*we have to modified*/
 		{
 			switch(connection->service_status){
 				case ST_SERVICE_DISCOVERY:

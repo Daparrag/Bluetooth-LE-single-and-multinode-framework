@@ -206,6 +206,7 @@ ST_STABLISHED,						/*!< connection stablished after discover services and chara
 ST_OBSERVER,						/*!< handler the communication as observer node >*/
 ST_BROADCAST, 						/*!< handler the communication as broadcast node >*/
 ST_CONNECTED_WAIT_CHAR_DISC,		/*!< ?¿ >*/
+ST_CREATE_CONNECTION,  
 ST_TIME_OUT  						/*!< the connection exceed the time for stablishement >*/	
 }cn_state_t;
 
@@ -277,8 +278,15 @@ typedef struct
 }network_t;
 
 
+/*****************************EVENT HANDLER STRUCTURES**********************************************/
+typedef struct {
+  uint8_t event_type;
+   hci_event_pckt event_data;
+}event_t;
+
 
 /***************************************************************************************************/
+
 
 
 #endif /* NET_BLE_H*/

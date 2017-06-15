@@ -93,76 +93,84 @@ if(led_toggle_count++ > LED_TOGGLE_CONNECTED)
   * @param   net_flags * flags: flags to handler the status of the network;
   * @retval void.
   */
-void connection_handler_coriented (connection_t * connection, net_flags * flags){
-CHADLE_Status ret;	
-/*input verification*/
-if(connection==NULL || flags==NULL){
-	PRINTF("some of the imput parameters on the connection handler is NULL  please verify\n");
-	return;
-}
+void connection_handler_coriented (connection_t * connection, event_t * event){
+  CHADLE_Status ret;
+  /*input verification*/
+  if(connection==NULL){
+    PRINTF("some of the imput parameters on the connection handler is NULL  please verify\n");
+    return;
+  }
 /*fsm*/
-	switch(connection->connection_status){
-		case ST_UNESTABLISHED:
-		{
-			connection_unestablished_toggle();
-			switch(connection->device_cstatus){
-				case DEVICE_UNITIALIZED:
-				{
-					PRINTF("device unitialized please reinitialize \n");
-					HAL_Delay(SEG_DELAY);
-				}
-				break;
-				case DEVICE_DISCOVERY_MODE:
-				{/*connection UNESTABLISHED & device in DISCOVERY_MODE*/
-					
-					if(flags->device_found && !(flags->wait_end_procedure))
-						{/*single connection setup*/
-							ret=CH_create_connection_BLE(connection->cconfig, connection->device_type_addrs, (void*)&(connection->device_address));	
-							if(ret != CHADLE_SUCCESS)
-							{
-								PRINTF("error has been occour during the single connection setup \n");
-								connection_handler_error();
-							}
-							/*update_flag*/
-							flags->device_found=0;
-							
-						}
-					else if(!(flags->device_found) && !(flags->wait_end_procedure))
-						{/*setup the discovery procedure.*/
-							ret= CH_set_discovery_BLE (DV_config);/*issue*/
-							if(ret != CHADLE_SUCCESS)
-							{
-								PRINTF("error has been occour during the setting the discovery procedure \n");
-								connection_handler_error();
-							}
-							flags->wait_end_procedure=1;
+  switch(connection->connection_status)
+  {
+    case ST_UNESTABLISHED:
+    {
+      connection_unestablished_toggle();
+      switch(connection->device_cstatus)
+      {
+        case DEVICE_DISCOVERY_MODE:
+        {/*device is in discovery_mode*/
+          if(event !=NULL){
+            switch(event->event_type)
+            {
+              case EVT_LE_ADVERTISING_REPORT:
+              {
+                /*execute the new device found procedure*/
+                connection->connection_status = ST_CREATE_CONNECTION;
+              }
+              break;
+            }
+          }else{
 
-						}			
-				}
-				break;
-			} 
-		}
-		break;
-		case ST_STABLISHED:
-		{
-			connection_stablished_toggle();
-		}
-		break;
-		case ST_BROADCAST:
-		{
-			connection_stablished_toggle();
-		}
-		break;
-		case ST_TIME_OUT:
-		{
-			connection_stablished_toggle();
-		}
-		break;
-		default:
-		break;
-	}
+            ret= CH_set_discovery_BLE (DV_config);/*issue*/
+              if(ret != CHADLE_SUCCESS)
+              {
+                PRINTF("error has been occour during the setting the discovery procedure \n");
+                connection_handler_error();
+              }
+
+          }
+        }
+        break;
+      }
+    }
+    break;
+
+    case ST_CREATE_CONNECTION:
+    {
+      switch(connection->device_cstatus)
+      {
+        case DEVICE_DISCOVERY_MODE:
+        {
+          if(event !=NULL){
+            switch(event->event_type)
+            {
+              case EVT_LE_CONN_COMPLETE:
+              {
+                /*execute the connection complete procedure*/
+                connection->connection_status = ST_STABLISHED;
+              }
+              break;
+
+
+            }
+          }
+        }
+        break;
+      }
+
+    }
+    break;
+
+    case ST_STABLISHED:
+    {
+      
+    }
+    break;
+
+  } 
+
 }
-
 /**
   * @brief  This function management the connection setup procedure.
   * @param  void *connect_config: user configuration (optional)
