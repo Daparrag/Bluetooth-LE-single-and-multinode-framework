@@ -24,11 +24,10 @@
 
 /*copy macro*/
 
+
 #ifndef COPY_VAR
 #define COPY_VAR(dest,source) memcpy(dest,(void*)source,sizeof((source)))
 #endif
-
-
 
 /*multinode setup*/
 #ifndef MULTINODE

@@ -251,6 +251,9 @@ APP_Status APP_set_advertise_BLE(void * advertise_conf,
 /*check for advertise config*/
   if(advertise_conf==NULL){
 
+    if(   GET_ROLE(bnrg_expansion_board)!= (GAP_PERIPHERAL_ROLE_IDB04A1 || GAP_BROADCASTER_ROLE_IDB04A1 || GAP_PERIPHERAL_ROLE_IDB05A1 || GAP_BROADCASTER_ROLE_IDB05A1)){
+              PRINTF("There is no possible to setup the device in adverticement mode if it is not in GAP_PERIPHERAL_ROLE or GAP_BROADCASTER_ROLE please set it in app_ble.h/n");
+         }
     /*uses default configuration*/
       ret = aci_gap_set_discoverable(AV_default_config.adveventtype,
                                      AV_default_config.advintervalmin,

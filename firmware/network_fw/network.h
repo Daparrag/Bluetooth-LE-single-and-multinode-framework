@@ -6,9 +6,12 @@
 #include <ble_firmware.h>
 #include <chandler.h>
 #include <servhandler.h>
+#include <eventhandler.h>
 
 
-
+#ifdef DEBUG
+#include "debug.h"
+#endif
 
 
 
@@ -37,5 +40,9 @@ void get_services_status_by_addrs(uint8_t * slave_addrs, sv_state_t ** cstatus);
 NET_Status network_process(void);/*main network function: running the connection handler and the services handler */
 
 void network_update_status(net_status_t newstatus);/*change the status of the network*/
+
+uint8_t network_get_wait_end_procedure_flag(void);
+
+connection_t * NET_Get_currentConnection_CB(void);
 
 #endif /* NET_BLE_H*/

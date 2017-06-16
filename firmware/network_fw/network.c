@@ -20,7 +20,9 @@ static void init_device(void);
 static int get_connection_index_by_addrs(uint8_t * addrs);
 static void Get_Device_From_Conn_Handle(uint16_t conn_handler);
 static uint8_t verify_Conn_Handle (uint16_t handle, uint8_t *index);
-static void NET_Get_currentConnection_CB(connection_t * connection);
+static int new_event(event_t * event);
+static void network_set_wait_end_procedure(void);
+static void network_clean_wait_end_procedure(void);
 NET_Status NET_DisconnectionComplete_CB(uint16_t conn_handle);
 /****************** Variable Declaration **************************/
 net_type_t    net_mode =  NET_CONNECTED;/*the default connection mode*/
@@ -266,32 +268,50 @@ void network_set_event(void){
 
 }
 
+
+void network_set_wait_end_procedure(void){
+  network.flags.wait_end_procedure=1;
+}
+
+void network_clean_wait_end_procedure(void){
+  network.flags.wait_end_procedure = 0;
+}
+
+uint8_t network_get_wait_end_procedure_flag(void){
+  return network.flags.wait_end_procedure;
+}
+
+
 NET_Status network_process(void){/*the idea is to  include all the network  events and dispach appropiately*/
 event_t * event;
 connection_t * connection;
 
-	if(new_event(event)){
+	if(HCI_new_Event_CB()){
+            event = HCI_Get_Event_CB();
 		switch(event->event_type)
 		{   /*events related with the connection handler*/
 			case EVT_DISCONN_COMPLETE:
 			{
 				evt_disconn_complete *evt = (evt_disconn_complete *)event->event_data.data;
 				NET_DisconnectionComplete_CB(evt->handle);
+                                 network_clean_wait_end_procedure();
 			}
 			break;
 
 			case EVT_LE_CONN_COMPLETE:
 			{
-				NET_Get_currentConnection_CB(connection);
+				connection = NET_Get_currentConnection_CB();
 					if(connection!=NULL)connection_handler_coriented(connection,event);
+                                        network_clean_wait_end_procedure();
 
 			}
 			break;
 
 			case EVT_LE_ADVERTISING_REPORT:
 			{
-			 	NET_Get_currentConnection_CB(connection);
+			 	connection = NET_Get_currentConnection_CB();
 			 	if(connection!=NULL)connection_handler_coriented(connection,event);
+                                network_clean_wait_end_procedure();
 			}
 			break;
 			/*events related with the service handler*/
@@ -316,10 +336,13 @@ connection_t * connection;
 
 		}
 	}else{
-		connection_handler_coriented(connection,NULL); 
+                
+          connection_handler_coriented(&network.mMSConnection[0],NULL); 
+          network_set_wait_end_procedure();
+          
 	}
 
-
+return NET_SUCCESS;
 }
 
 
@@ -376,10 +399,10 @@ uint8_t i;
  * @retval None
  */
 
-void NET_Get_currentConnection_CB(connection_t * connection){
-
-	uint8_t i;
+connection_t * NET_Get_currentConnection_CB(void){
 	cn_state_t connection_status;
+        connection_t * connection;
+       
 #ifdef MULTINODE
 	uint8_t index = network.num_device_found;
 	connection_status =  network.mMSConnection[index].connection_status;
@@ -392,6 +415,7 @@ void NET_Get_currentConnection_CB(connection_t * connection){
 	else connection = NULL;
 #endif	
 
+        return connection;
 }
 
 NET_Status NET_DisconnectionComplete_CB(uint16_t conn_handle){
@@ -430,7 +454,8 @@ NET_Status NET_ConnectionComplete_CB(uint8_t addr[6], uint16_t handle){
       //COPY_VAR(network.mMSConnection[index].device_address)
 #else
   
-#endif   
+#endif 
+return NET_SUCCESS;      
 }
 
 

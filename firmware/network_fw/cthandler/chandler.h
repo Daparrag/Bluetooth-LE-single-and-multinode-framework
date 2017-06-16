@@ -7,6 +7,10 @@
 #include "ble_app_conf.h" 
 #endif
 
+#ifdef DEBUG
+#include "debug.h"
+#endif
+
 #include <ble_firmware.h>
 #include <stm32f4xx_hal.h>
 #include <app_ble.h>
@@ -57,8 +61,8 @@
 #endif
 
 #ifndef LED_TOGGLE_CONFIG
-#define LED_TOGGLE_UNESTABLISHED     800000
-#define LED_TOGGLE_DISCOVERY         800000
+#define LED_TOGGLE_UNESTABLISHED      80000
+#define LED_TOGGLE_DISCOVERY          80000
 #define LED_TOGGLE_CONNECTED          30000
 #endif
 
@@ -73,6 +77,16 @@ CHADLE_Status CH_create_connection_BLE(void *connect_config,
 CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config);
 
 CHADLE_Status CH_set_discovery_limited_BLE(void * dicovery_config);
+
+/*control flag function */
+
+void set_connection_wait_procedure(void);
+
+void clean_connection_wait_procedure(void);
+
+uint8_t get_connection_end_procedute(void);
+
+
 
 
 

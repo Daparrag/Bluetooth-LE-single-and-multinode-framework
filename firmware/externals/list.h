@@ -69,6 +69,11 @@
 #define LIST_CONCAT2(s1, s2) s1##s2
 #define LIST_CONCAT(s1, s2) LIST_CONCAT2(s1, s2)
 
+   
+#ifdef DEBUG
+#include "debug.h"
+#endif   
+   
 /**
  * Declare a linked list.
  *
@@ -109,6 +114,23 @@
          void *LIST_CONCAT(name,_list); \
          list_t name
 
+           
+/**
+ * Initialize a linked list that is part of a structure.
+ *
+ * This macro sets up the internal pointers in a list that has been
+ * defined as part of a struct. This macro must be called before using
+ * the list.
+ *
+ * \param struct_ptr A pointer to the struct
+ * \param name The name of the list.
+ */
+#define LIST_STRUCT_INIT2(struct_ptr, name)                              \
+    do {                                                                \
+       (struct_ptr)->name = &((struct_ptr)->LIST_CONCAT(name,_list));   \
+    } while(0)
+           
+           
 /**
  * Initialize a linked list that is part of a structure.
  *

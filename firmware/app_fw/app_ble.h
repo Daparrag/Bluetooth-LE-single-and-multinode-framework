@@ -37,7 +37,6 @@
 #define GET_ROLE(arch) ((arch)==0 ? CONCAT(ROLE,_IDB04A1) : CONCAT(ROLE,_IDB05A1))
 
 
-
 /*configuration Variables*/
 #ifndef IDB04A1
 #define IDB04A1 0

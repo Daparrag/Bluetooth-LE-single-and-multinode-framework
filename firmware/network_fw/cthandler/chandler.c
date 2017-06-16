@@ -24,7 +24,7 @@ app_advertise_t  * AV_config= NULL;
 const app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
 const config_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
 /************************************Module Flags*****************************************/
-
+uint8_t wait_end_procedure = 0;
 
 
 /******************************Static func************************************************/ 
@@ -120,7 +120,7 @@ void connection_handler_coriented (connection_t * connection, event_t * event){
               }
               break;
             }
-          }else{
+          }else if(!wait_end_procedure){/*ths is a local flag not at network level*/
 
             ret= CH_set_discovery_BLE (DV_config);/*issue*/
               if(ret != CHADLE_SUCCESS)
@@ -128,6 +128,8 @@ void connection_handler_coriented (connection_t * connection, event_t * event){
                 PRINTF("error has been occour during the setting the discovery procedure \n");
                 connection_handler_error();
               }
+              
+              
 
           }
         }
@@ -164,7 +166,7 @@ void connection_handler_coriented (connection_t * connection, event_t * event){
 
     case ST_STABLISHED:
     {
-      
+      connection_stablished_toggle();
     }
     break;
 
@@ -294,6 +296,20 @@ CHADLE_Status CH_set_discovery_BLE(void * dicovery_config){/*this is used for re
    return CHADLE_SUCCESS;
 
 }
+
+
+void set_connection_wait_procedure(void){
+  wait_end_procedure = 1;
+}
+
+void clean_connection_wait_procedure(void){
+  wait_end_procedure = 0;
+}
+
+uint8_t get_connection_end_procedute(void){
+ return wait_end_procedure;
+}
+
 
 
 
