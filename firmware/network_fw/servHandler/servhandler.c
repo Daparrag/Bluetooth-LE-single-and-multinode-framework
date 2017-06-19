@@ -73,7 +73,7 @@ if(connection==NULL || flags==NULL){
 
 /*profile discovery fsm */
 	switch(connection->connection_status){
-		case ST_READY_TO_INTERCHANGE:
+		case ST_STABLISHED:/*we have to modified*/
 		{
 			switch(connection->service_status){
 				case ST_SERVICE_DISCOVERY:
@@ -129,9 +129,9 @@ num_service = connection->Node_profile->n_service;
 
 	if (serv_control_flags->services_to_find!=0 && num_service!=0)
 	{
-		service = (app_service_t *) list_head(connection->Node_profile->_service);
+		service = (app_service_t *) connection->Node_profile->services;
 		for(i=0;i < num_service-(serv_control_flags->services_to_find); i++ ){
-			service = (app_service_t *)list_item_next((void *) service );
+			service = (app_service_t *)service->next_service;
 		}
 
 		if(service==NULL)
@@ -213,7 +213,7 @@ num_services = connection->Node_profile->n_service;
 		&& num_char!=0)
 	{
 
-		charac = (app_attr_t *)list_head(service->_attr);
+		charac = NULL;//(app_attr_t *)list_head(service->_attr);
 
 		for(i=0; i < attr_control_flags->char_scanned; i ++){
 			charac = (app_attr_t *) list_item_next((void *) charac);

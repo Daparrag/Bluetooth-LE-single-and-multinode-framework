@@ -3,7 +3,15 @@
 #ifndef SERVICE_HANDLER_BLE_H
 #define SERVICE_HANDLER_BLE_H
 
+#ifdef BLE_APP_CONFIG
+#include "blefw_conf.h" 
+#endif
+
 #include <ble_firmware.h>
+
+#ifdef DEBUG
+#include "debug.h"
+#endif
 
 /********************SERVICE HANDLER DEFAULT CONFIG*************/
 #define DONT_FIND_SERVICE 	0x00
@@ -19,7 +27,7 @@
 #endif
 
 #ifndef DISC_CHAR
-#define DISC_CHAR			FIND_SPE_CHAR	
+#define DISC_CHAR	        FIND_SPE_CHAR	
 #endif
 
 

@@ -11,68 +11,500 @@
 *	4. receives events notification from the event_handler or application parameters (we can implement and event queue but this is so advance for this application but could be introduce an efficient resouce management)
 */
 #include <network.h>
-/*****************************macros**********************************************/
 
-/*********************Static func************************/
-static void init_connection_handler(void);
-static void init_services_handler();
-static int get_connection_index_by_addrs(uint8_t * addrs);
+/****************** Variable Declaration **************************/
 net_type_t    net_mode =  NET_CONNECTED;/*the default connection mode*/
+dv_type_t     device_role = DEVICE_CENTRAL; /*by default the devices will be cental*/
 net_status_t  net_status = NET_NOT_INITIALIZED;
+static uint32_t led_toggle_count = 0;
+
 network_t network;
 /*********************************************************/
 
-NET_Status init_network(net_type_t net_type, network_t * net_output){
-/*initialized the network flags*/
-network.flags.new_net_event=0;
-network.flags.device_found=0;
-network.flags.wait_end_procedure=0;
-network.flags.service_discovery_evt=0;
-network.flags.attr_discovery_evt=0;
-network.flags.retry_conn=0;
-/*here it is possible to setup different configurations based on the network type*/
-net_mode = net_type;
-init_connection_handler();
-init_services_handler();
-net_status = NET_INITALIZED;
-net_output=&network;
+/*********************Static func************************/
+static void network_set_wait_end_procedure(void);
+static void network_clean_wait_end_procedure(void);
+static uint8_t network_get_wait_end_procedure(void);
+static connection_t * NET_Get_currentConnection_CB(void);
+static NET_Status network_process_central(event_t * event);
+static NET_Status network_process_pherispheral(event_t * event);
+static connection_t *  NET_Connection_to_stablished_CB(void);
+static connection_t * NET_get_connection_by_address_BLE(uint8_t * addrss);
+static uint8_t validate_new_pherispheral_address(uint8_t *peer_address);
+static void init_device(void);
+static void connection_unestablished_toggle(void);
+static void connection_stablished_toggle(void);
+static void init_service_handler(void);
+static void init_service_handler(void);
+static connection * NET_get_connection_to_service_Scan_BLE(void);
+static connection * NET_get_connection_to_char_Scan_BLE(void);
+
+
+/**
+  * @brief  This function is used for indicate the connection_stablished state.
+  * @param void.
+  * @retval void.
+  */
+void connection_stablished_toggle(void){
+
+if(led_toggle_count++ > LED_TOGGLE_CONNECTED)
+	{
+		led_toggle_count=0;
+		BSP_LED_Toggle(LED2);
+	}
+}
+
+
+/**
+  * @brief  This function is used for indicate the connection_unestablished state.
+  * @param void.
+  * @retval void.
+  */
+
+void connection_unestablished_toggle(void){
+
+if(led_toggle_count++ > LED_TOGGLE_UNESTABLISHED)
+	{
+		led_toggle_count=0;
+		BSP_LED_Toggle(LED2);
+	}
+}
+
+
+
+void network_set_wait_end_procedure(void ){
+
+	network.flags.wait_end_procedure=1;
+}
+
+void network_clean_wait_end_procedure(void ){
+
+	network.flags.wait_end_procedure=0;
+}
+
+
+ uint8_t network_get_wait_end_procedure(void ){
+
+	return network.flags.wait_end_procedure;
+}
+
+
+
+NET_Status init_network(net_type_t net_type, dv_type_t device_type ,network_t ** net_output){
+
+	network.flags.wait_end_procedure=0;
+    network.flags.connection_stablishment_complete=0;
+    network.flags.services_discovery_complete=0;
+	net_mode = net_type;
+	device_role = device_type;
+	network.num_device_found=0;
+	network.num_device_connected=0;
+	init_device();
+	init_service_handler();
+	net_status = NET_INITALIZED;
+	*net_output=&network;
+	return NET_SUCCESS;
+}
+
+
+void init_device(void){
+
+    dv_state_t device_init_config =  DEVICE_UNITIALIZED;
+
+	if (device_role == DEVICE_CENTRAL)            device_init_config = DEVICE_DISCOVERY_MODE;
+	if (device_role == DEVICE_PHERISPHERAL)       device_init_config = DEVICE_ADVERTISEMENT_MODE;
+	if (device_role == DEVICE_BROADCASTER)        device_init_config = DEVICE_ADVERTISEMENT_MODE;
+  	if (device_role == DEVICE_OBSERVER)             device_init_config = DEVICE_SCAN_MODE;
+network.device_cstatus = device_init_config;
+
+}
+
+
+void init_service_handler(void){
+	#ifdef MULTINODE
+		uint8_t i;
+		for(i=0; i < EXPECTED_NODES; i++)
+			network.mMSConnection[i].service_status = ST_SERVICE_DISCOVERY;
+
+	#else
+			network.mMSConnection.service_status = ST_SERVICE_DISCOVERY;
+	#endif
+}
+
+void init_connection_handler(void){
+#ifdef MULTINODE
+		uint8_t i;
+		for(i=0; i < EXPECTED_NODES; i++)
+			network.mMSConnection[i].connection_status = ST_UNESTABLISHED;
+	#else
+			network.mMSConnection.connection_status = ST_UNESTABLISHED;
+	#endif
+}
+
+
+NET_Status network_process(event_t * event){
+NET_Status ret;
+	switch(device_role){
+		case DEVICE_CENTRAL:
+		{
+			ret = network_process_central(event);
+		}
+		break;
+
+		case DEVICE_PHERISPHERAL:
+		{
+			ret = network_process_pherispheral(event);
+		}
+		break;
+
+	}
+
+ if(!network.flags.connection_stablishment_complete) connection_unestablished_toggle();
+ else connection_stablished_toggle();
+
+return ret;
+
+}
+
+
+
+
+NET_Status network_process_central(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
+
+CHADLE_Status ch_ret;
+SERV_Status   serv_ret;
+connection_t * connection;
+
+	if(device_role==DEVICE_CENTRAL){
+		switch(network.device_cstatus){
+			case DEVICE_UNITIALIZED:
+			{
+				 PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
+				 return NET_ERROR;
+			}
+			break;
+
+			case DEVICE_DISCOVERY_MODE:
+			{
+				if(event!=NULL){
+					switch (event->event_type){
+						case EVT_LE_ADVERTISING_REPORT:
+						{
+							connection = NET_Get_currentConnection_CB();
+							if(connection!=NULL){
+								le_advertising_info *pr = (le_advertising_info*) event->evt_data; 
+                                                               if(!validate_new_pherispheral_address(pr->bdaddr))break;
+                                                                ch_ret = CH_new_device_found_BLE(connection, (void *) pr);
+                                                
+
+                                                                if(ch_ret!=CHADLE_SUCCESS){
+                                                                  PRINTDEBUG(" An Error occur during CH_new_device_found_BLE procedure please check the parameters\n");
+                                                                  return NET_ERROR;
+                                                                }
+
+                                                            network.num_device_found+=1;
+
+                                                            connection->connection_status=ST_CREATE_CONNECTION;
+							}
+                                                        
+							if(network.num_device_found == EXPECTED_NODES){
+                                                            network.device_cstatus=DEVICE_READY_TO_CONNECT;
+                                                            network_clean_wait_end_procedure();
+                                                        }
+                                               
+						}
+						break;
+
+					}
+				
+				}else if(network_get_wait_end_procedure()==0){
+					 if(DISCOVERY_MODE == GENERAL_DISCOVERY) ch_ret= CH_run_discovery_BLE ();/*issue*/
+            		 if(DISCOVERY_MODE == SELECTIVE_DISCOVERY) ch_ret = CH_run_selective_discovery_BLE();
+
+            		 if(ch_ret!=CHADLE_SUCCESS){
+            		 	PRINTDEBUG(" An Error occur during general-discovery-setup please check the configuration parameters\n");
+            		 	return NET_ERROR;
+            		 }
+
+            		 network_set_wait_end_procedure();
+				}
+			}
+			break;
+
+			case DEVICE_READY_TO_CONNECT:
+			{
+				if(event!=NULL){
+					switch (event->event_type){
+						case EVT_LE_CONN_COMPLETE:
+						{
+					/*execute the connection complete procedure*/
+							
+                			evt_le_connection_complete *cc =  (void*) event->evt_data;
+
+                			connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
+                			ch_ret = CH_Connection_Complete_BLE(connection,cc->handle,cc->peer_bdaddr);
+
+                			if(ch_ret!=CHADLE_SUCCESS){
+                 				  	PRINTDEBUG(" An Error occur during CH_Connection_Complete_BLE procedure please check the parameters\n");
+                 				  	return NET_ERROR;
+                 			}
+
+                			network.num_device_connected+=1;
+                			if(network.num_device_connected == network.num_device_found){
+                				network.device_cstatus=DEVICE_READY_TO_INTERCHANGE;
+                                network.flags.connection_stablishment_complete=1;
+                			}
+                			connection->connection_status = ST_CONNECTED_WAIT_DISC;
+                			network_clean_wait_end_procedure();
+
+
+						}
+						break;
+					}
+				}else if(network_get_wait_end_procedure()==0){
+					connection=NET_get_connection_by_status_CB(ST_CREATE_CONNECTION);
+					ch_ret = CH_run_create_connection_BLE(connection);
+
+						if(ch_ret!=CHADLE_SUCCESS){
+                 			PRINTDEBUG(" An Error occur during CH_run_create_connection_BLE procedure please check the parameters\n");
+                 			return NET_ERROR;
+                 		}
+
+					network_set_wait_end_procedure();
+				}
+
+			}
+			break;
+			case DEVICE_READY_TO_INTERCHANGE:
+			{
+				if(event!=NULL){
+
+				}else if((network_get_wait_end_procedure()==0) && (network.net_flags.services_discovery_complete!=0)){
+					connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
+					switch(connection->service_status)
+					{
+						case ST_SERVICE_DISCOVERY:
+						{
+							if(DISC_SERVICE==FIND_SPE_SERVICE)serv_ret = DSCV_primary_services_by_uuid(connection);
+
+							if(serv_ret!=SERV_SUCCESS){
+							PRINTDEBUG(" error occur during the discovery services procedure DSCV_primary_services_by_uuid please check it \n");
+							return NET_ERROR;
+							}
+
+							if(connection->Node_profile->svflags.service_discovery_success)
+
+								connection->service_status = ST_CHAR_DISCOVERY;
+
+								
+
+						}
+						break;
+
+						case ST_CHAR_DISCOVERY:
+						{
+
+						}
+						break;
+
+					}
+				}
+			}
+			break;
+
+		}
+
+	}else{
+		PRINTDEBUG(" Error: This network process is not according with your device role please check it\n");
+		return NET_ERROR;
+	}
+        
+
 return NET_SUCCESS;
 }
 
 
-void init_connection_handler(void){
-	/*this procedure will initialized all the connection flags*/
-uint8_t i;
 
-#ifdef MULTINODE
-for(i=0; i <  EXPECTED_NODES; i++)   
-  network.mMSConnection[i].connection_status =  ST_UNESTABLISHED;
+NET_Status network_process_pherispheral(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
+CHADLE_Status ch_ret;
+connection_t * connection;
 
-                                    
+		if(device_role == DEVICE_PHERISPHERAL){
+			switch(network.device_cstatus){
+				case DEVICE_UNITIALIZED:
+				{
+				 	PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
+				 	return NET_ERROR;
 
-//network.mMSConnection[i].connection_status = ST_UNESTABLISHED;
-#else
-network.mMSConnection.connection_status = ST_UNESTABLISHED;
-#endif
+				}
+				break;
+				case DEVICE_ADVERTISEMENT_MODE{
+					if(event!=NULL){
+						case EVT_LE_CONN_COMPLETE:
+						{
+							connection=NET_get_connection_by_status_CB(ST_UNESTABLISHED)
+							evt_le_connection_complete *cc =  (void*) event->evt_data;
+							ch_ret = CH_Connection_Complete_perispheral_BLE(connection,cc->handle,cc->peer_bdaddr );
+							
+							if(ch_ret != CHADLE_SUCCESS){
+								PRINTDEBUG(" An Error occur during CH_Connection_Complete_perispheral_BLE procedure please check the parameters\n");
+                 				return NET_ERROR;
+							}
 
+							network.num_device_connected+=1;
+
+							if(network.num_device_connected == EXPECTED_CENTRAL_NODES){
+								network.device_cstatus->DEVICE_READY_TO_INTERCHANGE;
+								network_clean_wait_end_procedure();
+							}
+
+							connection->connection_status=ST_CONNECTED_WAIT_DISC;
+							
+						}
+						break;
+					}else if(network_get_wait_end_procedure()==0){
+						if(ADVERTICEMENT_MODE == GENERAL_ADVERTICEMENT) ch_ret=CH_run_advertise_BLE(); 
+
+						if(ch_ret!=CHADLE_SUCCESS){
+							PRINTDEBUG(" An Error occur during the adverticement setup procedure please check the parameters\n");
+							return NET_ERROR;
+
+						}
+						network_set_wait_end_procedure();
+
+					}
+
+				}
+				break;
+				case DEVICE_READY_TO_INTERCHANGE:
+				{
+
+						BSP_LED_On(LED2);
+						while(1);
+
+				}
+				break;
+			}
+
+		}else{
+
+			PRINTDEBUG(" Error: This network process is not according with your device role please check it\n");
+			return NET_ERROR;
+		}
+return NET_SUCCESS;
 }
 
 
 
-void init_services_handler(void){
-	/*this procedure will initialized all the service flags x connection*/
-uint8_t i;	
+
+
+connection_t * NET_Get_currentConnection_CB(void){
+	connection_t * connection = NULL;
 #ifdef MULTINODE
-for(i=0; i <= EXPECTED_NODES; i++)network.mMSConnection[i].service_status = ST_SERVICE_DISCOVERY;
+	uint8_t index = network.num_device_found;
+	uint8_t connection_status =  network.mMSConnection[index].connection_status;
+	if(connection_status==ST_UNESTABLISHED) connection = &network.mMSConnection[index];
+	
 #else
-network.mMSConnection.service_status = ST_SERVICE_DISCOVERY; /*always at the bigining */	
+	uint8_t connection_status =  network.mMSConnection.connection_status;
+	if(connection_status==ST_UNESTABLISHED)connection = &network.mMSConnection;
+
 #endif	
+ return connection;	
 }
+
+
+connection_t *  NET_Connection_to_stablished_CB(void){
+	connection_t * connection = NULL;
+	#ifdef MULTINODE
+	uint8_t i;
+	for (i=0; i < network.num_device_found; i++ ){
+		uint8_t connection_status =  network.mMSConnection[i].connection_status;
+		if(connection_status==ST_CREATE_CONNECTION)
+		{
+			connection = &network.mMSConnection[i]; 
+			break;
+		}
+	}
+	#else
+		uint8_t connection_status =  network.mMSConnection.connection_status;
+		if(connection_status==ST_CREATE_CONNECTION)connection = &network.mMSConnection;
+
+	#endif	
+
+ return connection;	
+}
+
+connection_t * NET_get_connection_by_status_CB(uint8_t _status){
+	connection_t * connection = NULL;
+	#ifdef MULTINODE
+	for (i=0; i < network.num_device_found; i++ ){
+		uint8_t connection_status =  network.mMSConnection[i].connection_status;
+		if(connection_status = _status){
+			connection = &network.mMSConnection[i];
+			break; 
+		}
+	}
+	#else
+	uint8_t connection_status =  network.mMSConnection.connection_status;
+	if(connection_status==_status)connection = &network.mMSConnection;
+	#endif
+return 	connection;
+}
+
+
+/*setup a profile for an specific connection*/
+NET_Status net_setup_profile_definition(app_profile_t * profile_def, 
+					uint8_t * list_index, 
+				        size_t list_index_size){
+uint8_t i;
+uint8_t index;
+/*check the input*/
+if(profile_def==NULL){
+
+	PRINTF("net_setup_profile_definition: input profile_def could not be NULL \n");
+	return NET_ERROR;
+}
+
+#ifdef MULTINODE
+
+if(list_index_size-1 >= EXPECTED_NODES || list_index== NULL){
+	PRINTF("error during net_setup_profile_definition: wrong imput parameters\n");
+	return NET_ERROR;
+}
+
+for(i=0; i < list_index_size; i++){
+	index = *list_index++;
+	network.mMSConnection[index].Node_profile=profile_def;
+
+	if(network.mMSConnection[index].Node_profile==NULL){
+		/*something is wrong*/
+		PRINTF("error during net_setup_profile_definition: wrong  confguration setup\n");
+		return NET_ERROR;
+	}
+}
+
+#else
+network.mMSConnection.Node_profile = profile_def;
+
+if(network.mMSConnection.Node_profile==NULL){
+		/*something is wrong*/
+		PRINTF("error during net_setup_profile_definition: wrong  confguration setup\n");
+		return NET_ERROR;
+	}
+
+#endif
+/*setup_ conection configuration  ok*/
+return NET_SUCCESS;
+}
+
+
+
 
 
 NET_Status net_setup_connection_config(config_connection_t * config, 
-										uint8_t * list_index, 
-										size_t list_index_size){
+					uint8_t * list_index, 
+                                        size_t list_index_size){
 
 uint8_t i;
 uint8_t index;
@@ -119,124 +551,96 @@ return NET_SUCCESS;
 }
 
 
-/*setup a profile for an specific connection*/
-NET_Status net_setup_profile_definition(app_profile_t * profile_def, 
-									  uint8_t * list_index, 
-									  size_t list_index_size){
-uint8_t i;
-uint8_t index;
-/*check the input*/
-if(profile_def==NULL){
 
-	PRINTF("net_setup_profile_definition: input profile_def could not be NULL \n");
-	return NET_ERROR;
-}
-
+uint8_t validate_new_pherispheral_address(uint8_t *peer_address){
+	
+	uint8_t i;
+	uint8_t j;
+    uint8_t address_valid=1;
 #ifdef MULTINODE
 
-if(list_index_size >= EXPECTED_NODES || list_index== NULL){
-	PRINTF("error during net_setup_profile_definition: wrong imput parameters\n");
-	return NET_ERROR;
-}
-
-for(i=0; i < list_index_size; i++){
-	index = *list_index++;
-	network.mMSConnection[index].Node_profile=profile_def;
-
-	if(network.mMSConnection[index].Node_profile==NULL){
-		/*something is wrong*/
-		PRINTF("error during net_setup_profile_definition: wrong  confguration setup\n");
-		return NET_ERROR;
+	for (i=0; i < network.num_device_found; i ++){
+			address_valid=0;
+			uint8_t * pr = network.mMSConnection[i].device_address;
+			uint8_t * pcomp = peer_address;
+		for(j=0; j < DEVICE_ADDRS_LENGTH ; j++){
+			uint8_t local_adds = *pr++;
+			uint8_t remote_adds = *pcomp++; 
+			if(local_adds!=remote_adds){
+				address_valid=1;
+                break;
+			}
+		}
 	}
-}
+#endif        
 
-#else
-network.mMSConnection.Node_profile = profile_def;
-
-if(network.mMSConnection.Node_profile==NULL){
-		/*something is wrong*/
-		PRINTF("error during net_setup_profile_definition: wrong  confguration setup\n");
-		return NET_ERROR;
-	}
-
-#endif
-/*setup_ conection configuration  ok*/
-return NET_SUCCESS;
+return address_valid;
 }
 
 
-
-/*get_connection_status*/
-void get_connection_status_by_addrs(uint8_t * slave_addrs, cn_state_t * cstatus){
-	int index;
-	index = get_connection_index_by_addrs(slave_addrs);
-
-	if(index==-1){
-		/*devices address does not match*/
-		cstatus=NULL;
-		return;
-	}
-#ifdef MULTINODE
-	cstatus = &network.mMSConnection[index].connection_status; 
-#else
-	cstatus = &network.mMSConnection.connection_status;
-#endif	
-}
+connection_t * NET_get_connection_by_address_BLE(uint8_t * peer_address){
 
 
+	#ifdef MULTINODE
+	uint8_t i;
+	uint8_t j;
+			for (i=0; i < network.num_device_found; i ++){
+				uint8_t address_match=1;
+				uint8_t * pr = network.mMSConnection[i].device_address;
+				uint8_t * pcomp = peer_address;
+				for(j=0; j < DEVICE_ADDRS_LENGTH ; j++){
+					uint8_t local_adds = *pr++;
+					uint8_t remote_adds = *pcomp++;
+					if(local_adds!=remote_adds){
+						address_match=0;
+						break;
+					}	
+				}
+				if(address_match){
+					return &network.mMSConnection[i];
+				}
 
-/*get_service_status*/
-void get_services_status_by_addrs(uint8_t * slave_addrs, sv_state_t * cstatus){
-
-	int index;
-	index = get_connection_index_by_addrs(slave_addrs);
-
-if(index==-1){
-		/*devices address does not match*/
-		cstatus=NULL;
-		return;
-	}
-
-#ifdef MULTINODE
-	cstatus = &network.mMSConnection[index].service_status; 
-#else
-	cstatus = &network.mMSConnection.service_status;
-#endif	
-
-
-}
-
-/*get_connection_index_by_addrs*/
-int get_connection_index_by_addrs(uint8_t * slave_addrs){
-uint8_t i;
-#ifdef MULTINODE
-for(i = 0; i < network.num_device_found; i++){
-	if(network.mMSConnection[i].device_address[1]==slave_addrs[0] 
-		&& network.mMSConnection[i].device_address[0]==slave_addrs[0]) return i;
-}
-#else
-if(network.mMSConnection.device_address[1]==slave_addrs[0] 
-	&& network.mMSConnection.device_address[0]==slave_addrs[0]) return 1;
-#endif
-PRINTF(" get_connection_index_by_addrs: error address does not exist\n");	
-return -1;
-}
+			}
 
 
-void network_update_status(net_status_t new_status){
-	net_status = new_status;
-}
+	#else
+		uint8_t i;
+		uint8_t address_match=1;
+		uint8_t * pr = network.mMSConnection.device_address;
+		uint8_t * pcomp = peer_address;
+		for(i=0; i < DEVICE_ADDRS_LENGTH ; i++){
+			uint8_t local_adds = *pr++;
+			uint8_t remote_adds = *pcomp++;
+			if(local_adds!=remote_adds){
+			address_match=0
+			break;
+			}
 
-void network_set_event(void){
+		}
 
-	if(network.flags.new_net_event){
-		//get_event();
-	}
+		if(address_match)
+			return  &network.mMSConnection;
+	#endif
+return NULL;
 
 }
 
-NET_Status network_process(){
-/*network process*/
+connection * NET_get_connection_to_service_Scan_BLE(void){
+	connection * connection=NULL;
+	#ifdef MULTINODE
+		uint8_t i;
+		for (i=0; i <network.num_device_found; i++ ){
+			if(network.mMSConnection[i].Node_profile.service_discovery_success==0) connection = network.mMSConnection[i];
+		}
+	#else
+		if(network.mMSConnection.Node_profile.service_discovery_success==0)connection = network.mMSConnection;
+	#endif
+return 	connection;	
 
-	return NET_SUCCESS;
+}
+
+
+connection * NET_get_connection_to_char_Scan_BLE(void){
+	return NULL;
+
 }

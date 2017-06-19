@@ -13,7 +13,9 @@ typedef enum TEST{
 
 
 Rtest_t app_module_test(void);
-Rtest_t network_module_test(void);
+Rtest_t chandler_module_test_central(void);
+Rtest_t chandler_module_test_pherispheral(void);
+
 Rtest_t global_test_central(void);
 Rtest_t global_test_pherispheral(void);
 Rtest_t global_test_broadcaster(void);

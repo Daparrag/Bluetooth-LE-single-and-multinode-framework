@@ -5,7 +5,7 @@
 #include <ble_firmware.h>
 
 #ifdef BLE_APP_CONFIG
-#include "ble_app_conf.h" 
+#include "blefw_conf.h" 
 #endif
 
 #ifdef DEBUG
@@ -35,7 +35,6 @@
 
 
 #define GET_ROLE(arch) ((arch)==0 ? CONCAT(ROLE,_IDB04A1) : CONCAT(ROLE,_IDB05A1))
-
 
 
 /*configuration Variables*/
@@ -104,9 +103,6 @@
 #endif
 
 
-
-
-
 /*could be removed since the network has to be independent of the node*/
 typedef struct{                     /*central node type structure*/
   network_t net;
@@ -140,9 +136,10 @@ APP_Status APP_set_advertise_BLE(void * advertise_conf,
 //                                    uint8_t peer_addrtype, 
 //                                    void * peer_addrs);/*used by setup connection by the master node*/
 
-APP_Status APP_get_service_BLE(app_profile_t * profile, app_service_t ** service);
 
-APP_Status APP_get_attribute_BLE(app_service_t * service, app_attr_t *attr);
+void * APP_get_service_BLE(app_profile_t * profile, void * service);
+
+void * APP_get_attribute_BLE(app_service_t * service, void *attr);
 
 
 void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise); /*used for retrieve the default config*/
