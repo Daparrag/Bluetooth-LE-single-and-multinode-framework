@@ -3,6 +3,10 @@
 #ifndef SERVICE_HANDLER_BLE_H
 #define SERVICE_HANDLER_BLE_H
 
+#ifdef BLE_APP_CONFIG
+#include "blefw_conf.h" 
+#endif
+
 #include <ble_firmware.h>
 
 #ifdef DEBUG

@@ -22,7 +22,9 @@
 #include "stm32_bluenrg_ble.h"
 #include <list.h>
 
-/*copy macro*/
+
+#define BLE_APP_CONFIG 0x1
+
 
 
 #ifndef COPY_VAR
@@ -31,13 +33,19 @@
 
 /*multinode setup*/
 #ifndef MULTINODE
-#define MULTINODE 			0x0
+#define MULTINODE 			0x01
 #endif
 
 #ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
-#define EXPECTED_NODES 7					
+#define EXPECTED_NODES 2
+#define EXPECTED_CENTRAL_NODES 2					
 #else
 #define EXPECTED_NODES 1
+#define EXPECTED_CENTRAL_NODES 2 
+#endif
+
+#ifndef DEVICE_ADDRS_LENGTH
+#define DEVICE_ADDRS_LENGTH 6
 #endif
 //#define MAX_SERVER_ATT_SIZE             0x03
 
@@ -65,6 +73,7 @@ DEVICE_DISCOVERY_MODE,			/*!< device set as discovery mode >*/
 DEVICE_ADVERTISEMENT_MODE,		/*!< device set as adverticement mode >*/
 DEVICE_SCAN_MODE,		        /*!< device set as scan mode >*/
 DEVICE_READY_TO_INTERCHANGE,
+DEVICE_READY_TO_CONNECT,
 DEVICE_READY,				/*!< device set as ready after connection stablishment >*/
 DEVICE_NOT_CONNECTED			/*!< device set as not connected after many connetion set up tries>*/
 }dv_state_t;
@@ -72,11 +81,10 @@ DEVICE_NOT_CONNECTED			/*!< device set as not connected after many connetion set
 typedef struct{
   uint8_t services_to_find;
   uint8_t services_success_scanned;   /*!< flag fire to indicate that all of the services fot this profile had been scanned >*/  
+  uint8_t service_discovery_success;
 }sv_ctrl_flags;
 
 typedef struct{
-uint8_t services_to_scan;						/*!<among of services to be scanned >*/
-uint8_t services_scanned;						/*!<among of services scanned >*/
 uint8_t char_to_scan;							/*!<among of characteristics to be scanned >*/
 uint8_t char_scanned;							/*!<among of characteristics scanned >*/
 uint8_t char_discovery_success;
@@ -99,6 +107,7 @@ struct _app_attr_t{
 typedef struct _app_attr_t app_attr_t;
 
 struct _app_service_t{
+  char_flags chrflags;
   uint8_t ServiceUUID[16];              /*!<Control service UUID.*/
   uint16_t ServiceHandle;               /*!< Service handle.*/
   uint8_t service_uuid_type;            /*!<Control service UUID_TYPE. 16 or 128 bits*/
@@ -114,19 +123,20 @@ typedef struct _app_service_t app_service_t;
 
 
 typedef struct{
-  LIST_STRUCT(_service);
   uint8_t n_service;                  /*!< Control counter of the number of services associate to this application*/
   sv_ctrl_flags svflags;                  /*!< in the connection this indicates how many services had been discovered.*/  
-  char_flags chrflags;
   app_service_t * services;
 }app_profile_t;
 
 
-typedef struct{/*structure for discovery configuration*/
+typedef struct{/*structure for general && selective discovery configuration*/
+  uint8_t scan_type;                 /*!<  set the device in active 0x01 or pasive 0x00 scanning>*/ 
   uint16_t sinterval;               /*!<  Time interval between two LE scans:0x0004-0x4000(period) >*/
   uint16_t swindows;                /*!<  Amoung of time for the duration of the LE scan:0x0004-0x4000(length) >*/
   uint8_t ownaddrtype;              /*!<  0x00:public address, 0x01: random device address >*/
   uint8_t fduplicates;              /*!<  0x00 do not  filter duplicates 0x01: filter duplicates >*/ 
+  uint8_t Num_whiteList_Entries;    /*!<  number of devices that have to be addded to the whitelist >*/ 
+  uint8_t *addr_array;              /*!<  address array will contain the Num_White_list_entries address_type and addresses >*/ 
 }app_discovery_t;
 
 
@@ -167,7 +177,8 @@ typedef enum{
 
 typedef enum service_State{
   ST_SERVICE_DISCOVERY,							/*!< Service Handler in a service discovery mode >*/
-  ST_CHAR_DISCOVERY						        /*!< Service Handler in a char discovery mode >*/
+  ST_CHAR_DISCOVERY,						        /*!< Service Handler in a char discovery mode >*/
+  ST_INTERCHANGE_COMPLETE
 }sv_state_t;
 
 
@@ -204,7 +215,7 @@ ST_UNESTABLISHED,					/*!< connection unestablished >*/
 ST_STABLISHED,						/*!< connection stablished after discover services and characteristics >*/
 ST_OBSERVER,						/*!< handler the communication as observer node >*/
 ST_BROADCAST, 						/*!< handler the communication as broadcast node >*/
-ST_CONNECTED_WAIT_CHAR_DISC,		/*!< ?¿ >*/
+ST_CONNECTED_WAIT_DISC,		/*!< ?¿ >*/
 ST_CREATE_CONNECTION,  
 ST_TIME_OUT  						/*!< the connection exceed the time for stablishement >*/	
 }cn_state_t;
@@ -245,7 +256,6 @@ uint16_t Connection_Handle;           /*!< define one and only one connection ha
 uint8_t device_type_addrs;            /*!< slave device addrs type*/
 uint8_t device_address[6];            /*!< device address val*/
 config_connection_t * cconfig;        /*!< device has a special connection configuration(optional) >*/
-dv_state_t device_cstatus;            /*!< status of the device for this specific connection*/
 servhandler_conf * sconfig;            /*!< device has a special services configuration(optional) >*/
 cn_state_t connection_status;         /*!< this is the connection status.*/
 sv_state_t service_status;
@@ -255,12 +265,9 @@ sv_state_t service_status;
 
 /*network module control flags*/
 typedef struct{
-volatile uint8_t new_net_event;               /*!< this flag is fire when new event is setup for the event handler or by the application >*/
-volatile uint8_t device_found;               /*!< this flag is fire when a new device has been found >*/
 volatile uint8_t wait_end_procedure;         /*!< this flag is fire when a procedure is not ended >*/
-volatile uint8_t service_discovery_evt;
-volatile uint8_t attr_discovery_evt;
-volatile uint8_t retry_conn;                 /*!< this flag is fire when a central node requere retry a connection with some pherispheral node>*/  
+uint8_t connection_stablishment_complete;
+uint8_t services_discovery_complete;
 }net_flags;
 
 
@@ -268,8 +275,10 @@ volatile uint8_t retry_conn;                 /*!< this flag is fire when a centr
 typedef struct 
 {
   net_flags flags;
-  #ifdef MULTINODE
   uint8_t num_device_found;           /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
+  uint8_t num_device_connected;           /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
+  dv_state_t device_cstatus;            /*!< status of the device in this network*/
+  #ifdef MULTINODE
   connection_t mMSConnection[EXPECTED_NODES]; /*<! here one connection per node mangement by the application >*/
   #else
   connection_t mMSConnection;         /*<! not multinode then a single connection is possible. >*/
@@ -280,7 +289,7 @@ typedef struct
 /*****************************EVENT HANDLER STRUCTURES**********************************************/
 typedef struct {
   uint8_t event_type;
-   hci_event_pckt event_data;
+  void * evt_data;
 }event_t;
 
 

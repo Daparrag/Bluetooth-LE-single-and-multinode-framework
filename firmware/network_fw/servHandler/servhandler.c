@@ -129,9 +129,9 @@ num_service = connection->Node_profile->n_service;
 
 	if (serv_control_flags->services_to_find!=0 && num_service!=0)
 	{
-		service = (app_service_t *) list_head(connection->Node_profile->_service);
+		service = (app_service_t *) connection->Node_profile->services;
 		for(i=0;i < num_service-(serv_control_flags->services_to_find); i++ ){
-			service = (app_service_t *)list_item_next((void *) service );
+			service = (app_service_t *)service->next_service;
 		}
 
 		if(service==NULL)

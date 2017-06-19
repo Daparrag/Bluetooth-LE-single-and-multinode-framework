@@ -17,6 +17,8 @@
 /****************** Variable Declaration **************************/
 LIST(event_queue); /*definition of the network queue*/
 struct event_entry _events [EVENT_QUEUE_SIZE];
+
+event_t _event;
 uint8_t start_slot;
 uint8_t end_slot;
 static const uint8_t max_slots = EVENT_QUEUE_SIZE-1; 
@@ -54,10 +56,10 @@ uint8_t HCI_Get_Event_Queue_status_CB(void){
 
 uint8_t HCI_Get_Entry_Index_CB(void)
 {
+/*insert control mechanism  to avoid overwrite slots which are not yet processed */  
+  
   uint8_t free_slots;
   uint8_t queue_size = HCI_Get_Event_Queue_Size_CB();
-
-/*isert control mechanism  to avoid overwrite slots which are not yet processed */
 
   if(start_slot == end_slot){
     if(HCI_Get_Event_Queue_status_CB() != QUEUE_FULL)
@@ -102,6 +104,65 @@ list_pop (event_queue);
 }
 
 
+void HCI_Event_Handler_CB_(void *pckt){
+  hci_uart_pckt *hci_pckt = pckt;
+  hci_event_pckt * event_pckt = (hci_event_pckt*)hci_pckt->data;
+  if(hci_pckt->type != HCI_EVENT_PKT)return;
+  
+  switch(event_pckt->evt){
+    
+    case EVT_DISCONN_COMPLETE:
+	 	{
+	 		
+                  while(1);
+	 		
+	 	}
+	 	break;
+
+	 	case EVT_LE_META_EVENT:
+	 	{
+	 		  evt_le_meta_event *evt = (void *)event_pckt->data;
+	 		   switch(evt->subevent)
+	 		   {
+	 		   	 case EVT_LE_CONN_COMPLETE:
+	 		   	 {
+                                   //PRINTDEBUG("EVT_LE_CONN_COMPLETE");
+                                    evt_le_connection_complete *cc = (void *)evt->data;
+                                    _event.event_type = EVT_LE_CONN_COMPLETE;
+                                    _event.evt_data =cc;
+                                     network_process(&_event);
+                                   
+
+	 		   	 }
+	 		   	 break;
+
+	 		   	 case EVT_LE_ADVERTISING_REPORT:
+	 		   	 {
+	 		   	 	
+                                    le_advertising_info *pr = (le_advertising_info*) (((uint8_t*)evt->data)+1);
+                                   _event.event_type = EVT_LE_ADVERTISING_REPORT;
+                                    _event.evt_data = pr;
+                                    network_process(&_event);
+                                    // BSP_LED_On(LED2);
+                                    // while(1);
+	 		   	 }
+	 		   	 break;
+                                 
+                                 case EVT_BLUE_GAP_DEVICE_FOUND:
+                                   {
+                                   /*IDB04A1*/
+                                   }
+                                   break;
+
+	 		   
+
+	 		   }
+	 	}
+	 	break; 
+  }
+}
+
+
 void HCI_Event_Handler_CB(void *pckt){
 uint8_t index_queue;
   hci_uart_pckt *hci_pckt = pckt;
@@ -115,7 +176,7 @@ uint8_t index_queue;
 	 	case EVT_DISCONN_COMPLETE:
 	 	{
 	 		
-	 		COPY_EVENT (&_events[index_queue].event_val.event_data, event_pckt);
+	 		//COPY_EVENT (&_events[index_queue].event_val.event_data, event_pckt);
 	 		_events[index_queue].event_val.event_type = EVT_DISCONN_COMPLETE;
 	 		
 	 	}
@@ -128,7 +189,7 @@ uint8_t index_queue;
 	 		   {
 	 		   	 case EVT_LE_CONN_COMPLETE:
 	 		   	 {
-	 		   	 	COPY_EVENT (&_events[index_queue].event_val.event_data,event_pckt);
+	 		   	 	//COPY_EVENT (&_events[index_queue].event_val.event_data,event_pckt);
 	 		   	 	_events[index_queue].event_val.event_type = EVT_LE_CONN_COMPLETE;
                                         HCI_add_Event_CB(&_events[index_queue]);
                                         
@@ -139,16 +200,19 @@ uint8_t index_queue;
 	 		   	 case EVT_LE_ADVERTISING_REPORT:
 	 		   	 {
 	 		   	 	
-                                   
-                                   COPY_EVENT (&_events[index_queue].event_val.event_data,event_pckt);
+                                    le_advertising_info *pr = (le_advertising_info*) (((uint8_t*)evt->data)+1);
                                     _events[index_queue].event_val.event_type = EVT_LE_ADVERTISING_REPORT;
-                                   
-                                    
+                             
                                     // BSP_LED_On(LED2);
                                     // while(1);
-
 	 		   	 }
 	 		   	 break;
+                                 
+                                 case EVT_BLUE_GAP_DEVICE_FOUND:
+                                   {
+                                   /*IDB04A1*/
+                                   }
+                                   break;
 
 	 		   
 

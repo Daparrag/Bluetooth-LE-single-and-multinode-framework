@@ -169,6 +169,8 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
     return APP_ERROR;
   }
   profile->n_service+=1; /*increment the control service counter*/
+  profile->svflags.services_to_find+=1;
+  profile->svflags.services_success_scanned=0;
  return APP_SUCCESS;
 }
 
@@ -219,6 +221,8 @@ APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
       
     }  
     service->n_attr+=1;
+    service->chrflags.char_to_scan+=1;
+    service->chrflags.char_discovery_success=0;
     return APP_SUCCESS;
 }
 

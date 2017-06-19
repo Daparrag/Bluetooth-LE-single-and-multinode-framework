@@ -5,7 +5,7 @@
 #include <ble_firmware.h>
 
 #ifdef BLE_APP_CONFIG
-#include "ble_app_conf.h" 
+#include "blefw_conf.h" 
 #endif
 
 #ifdef DEBUG
@@ -101,9 +101,6 @@
 #ifndef SERVICE_TYPE
 #define SERVICE_TYPE PRIMARY_SERVICE
 #endif
-
-
-
 
 
 /*could be removed since the network has to be independent of the node*/

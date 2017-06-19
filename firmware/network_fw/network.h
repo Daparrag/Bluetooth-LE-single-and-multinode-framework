@@ -8,6 +8,9 @@
 #include <servhandler.h>
 #include <eventhandler.h>
 
+#ifdef BLE_APP_CONFIG
+#include "blefw_conf.h" 
+#endif
 
 #ifdef DEBUG
 #include "debug.h"
@@ -17,32 +20,18 @@
 
 typedef enum{
 	NET_NOT_INITIALIZED,
-	NET_INITALIZED
+	NET_INITALIZED,
 }net_status_t;
 
 
-NET_Status init_network(net_type_t net_type, dv_type_t device_type ,network_t ** net_output);/*initialized the network module*/
 
+NET_Status init_network(net_type_t net_type, dv_type_t device_type ,network_t ** net_output);/*initialized the network module*/
+NET_Status network_process(event_t * event);/*main network function: running the connection handler and the services handler */
 NET_Status net_setup_connection_config(config_connection_t * config, 
 										uint8_t * list_index, 
-										size_t list_index_size);/*allows setup a specific network configuiration requirements*/
-
+										size_t list_index_size);
 NET_Status net_setup_profile_definition(app_profile_t * profile_def, 
-									  uint8_t * list_index, 
-									  size_t list_index_size);/*allows setup a profile(services and characteristics) in a connection*/
+					uint8_t * list_index, 
+				        size_t list_index_size);
 
-void get_connection_status_by_addrs(uint8_t * slave_addrs, cn_state_t ** cstatus);/*return the status of the connection based on the slave address*/
-
-
-void get_services_status_by_addrs(uint8_t * slave_addrs, sv_state_t ** cstatus);/*return the service status based on the slave address*/
-
-
-NET_Status network_process(void);/*main network function: running the connection handler and the services handler */
-
-void network_update_status(net_status_t newstatus);/*change the status of the network*/
-
-uint8_t network_get_wait_end_procedure_flag(void);
-
-connection_t * NET_Get_currentConnection_CB(void);
-
-#endif /* NET_BLE_H*/
+#endif /*NET_BLE_H*/

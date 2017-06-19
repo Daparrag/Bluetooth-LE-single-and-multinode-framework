@@ -4,6 +4,10 @@
 
 #define EVENT_QUEUE_SIZE	8
 
+#ifdef BLE_APP_CONFIG
+#include "blefw_conf.h" 
+#endif
+
 
 #include <ble_firmware.h>
 
