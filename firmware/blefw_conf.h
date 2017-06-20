@@ -19,9 +19,9 @@
 
 #define LED_TOGGLE_CONFIG
 #define LED_TOGGLE_UNITIALIZED        100000
-#define LED_TOGGLE_INTERMIDLE          80000
-#define LED_TOGGLE_INTERCHANGE         30000          
-#define LED_TOGGLE_READY               10000
+#define LED_TOGGLE_INTERMIDLE         300000
+#define LED_TOGGLE_INTERCHANGE         10000          
+#define LED_TOGGLE_READY                5000
 #define LED_TOGGLE_CONNECTED           10000
 
 /********************SERVICE HANDLER DEFAULT CONFIG*************/
