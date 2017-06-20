@@ -1,6 +1,9 @@
 # Lib
 Some libraries for bluetooth LE synchonization protocol. 
 
+<img src="https://github.com/Daparrag/Lib/blob/master/firmware/screenshots/connection_complete.gif" alt="connection complete" width="600px" />
+
+
 ## components description
 
 
