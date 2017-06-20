@@ -26,8 +26,8 @@ const app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX
 /************************************Module Flags*****************************************/
 uint8_t wait_end_procedure = 0;
 /******************************Static func************************************************/ 
-static void connection_handler_broadcast(void);
-static void connection_handler_error(void);
+//static void connection_handler_broadcast(void);
+//static void connection_handler_error(void);
 static CHADLE_Status CH_set_advertise_BLE(void * advertise_conf, 
                                 uint8_t scanres_data_size,
                                 void * scanres_data,
@@ -121,7 +121,7 @@ CHADLE_Status CH_create_connection_BLE(void *connect_config,
      return CHADLE_ERROR;
    }
 
-  HAL_Delay(100);
+
    return CHADLE_SUCCESS;
 }
 
@@ -259,6 +259,7 @@ CHADLE_Status CH_Connection_Complete_BLE(connection_t * connection, uint16_t han
     PRINTDEBUG("0x%02X", *((uint8_t*)peer_addrs+i));   
    PRINTDEBUG("\n"); 
    
+     HAL_Delay(5);
    return CHADLE_SUCCESS;
 }
 
@@ -372,10 +373,16 @@ CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
     hci_le_set_scan_resp_data(scanres_data_size,(uint8_t * ) scanres_data);
   }
 
+  
+   uint8_t hw_board = get_harware_version();
+    const char * name = get_local_name();
+    uint8_t namesize = get_local_name_size();
+    
 /*check for advertise config*/
   if(advertise_conf==NULL){
-
-    if(   GET_ROLE(bnrg_expansion_board)!= (GAP_PERIPHERAL_ROLE_IDB04A1 || GAP_BROADCASTER_ROLE_IDB04A1 || GAP_PERIPHERAL_ROLE_IDB05A1 || GAP_BROADCASTER_ROLE_IDB05A1)){
+   
+    
+    if(   GET_ROLE(hw_board)!= (GAP_PERIPHERAL_ROLE_IDB04A1 || GAP_BROADCASTER_ROLE_IDB04A1 || GAP_PERIPHERAL_ROLE_IDB05A1 || GAP_BROADCASTER_ROLE_IDB05A1)){
               PRINTF("There is no possible to setup the device in adverticement mode if it is not in GAP_PERIPHERAL_ROLE or GAP_BROADCASTER_ROLE please set it in app_ble.h/n");
          }
     /*uses default configuration*/
@@ -384,8 +391,8 @@ CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
                                      AV_default_config.advintervalmax,
                                      AV_default_config.advaddrstype,
                                      AV_default_config.advfilterpoli,
-                                     sizeof(local_name),
-                                     local_name,
+                                     namesize,
+                                     name,
                                      serviceuuidlength,
                                      (uint8_t*)serviceuuidlist,
                                      AV_default_config.slconnintervalmin,
@@ -401,8 +408,8 @@ CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
                                     user_config->advintervalmax,
                                     user_config->advaddrstype,
                                     user_config->advfilterpoli,
-                                    sizeof(local_name),
-                                    local_name,
+                                    namesize,
+                                    name,
                                     serviceuuidlength,
                                     (uint8_t*)serviceuuidlist,
                                     user_config->slconnintervalmin,
@@ -421,7 +428,7 @@ if (ret != BLE_STATUS_SUCCESS){
 
 
 
-void connection_handler_broadcast(){
+/*void connection_handler_broadcast(){
 }
 
 
@@ -430,5 +437,5 @@ void connection_handler_error(void){
 	while(1);
 }
 
-
+*/
 

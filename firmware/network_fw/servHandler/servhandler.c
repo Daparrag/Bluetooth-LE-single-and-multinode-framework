@@ -16,11 +16,10 @@
 servhandler_conf servhandler_config = {DISC_SERVICE,DISC_CHAR}; /*this is the default configuration of the service handler module*/
 /**************************static functions******************************/
 void service_handler();
-static void set_char_flags(connection_t * connection);
+//static void set_char_flags(connection_t * connection);
 static void service_error_handler(void);
 static SERV_Status discovery_services(void);
-static SERV_Status DSCV_primary_services_by_uuid(connection_t * connection); /*primitive used for discover services characterized by a specific uuid*/
-static SERV_Status DSCV_char_by_uuid(connection_t * connection);/*primitive used for discover characteristics characterized by a specific uuid*/
+//static SERV_Status DSCV_char_by_uuid(connection_t * connection);/*primitive used for discover characteristics characterized by a specific uuid*/
 /***********************************************************************/
 
 /**
@@ -96,7 +95,7 @@ if(connection==NULL || flags==NULL){
 				{
 					if(flags->wait_end_procedure){
 						/* discover the remote characteristics.*/
-						if(servhandler_config.char_disc_mode==FIND_SPE_CHAR)DSCV_char_by_uuid(connection);
+						//if(servhandler_config.char_disc_mode==FIND_SPE_CHAR)DSCV_char_by_uuid(connection);
 						flags->wait_end_procedure=1;
 
 					}
@@ -169,84 +168,75 @@ serv_control_flags->services_to_find-=1;
 * @param  connection_t * connection: contain specific characteristics and services for this connection.
 * @retval SERV_Status: SERV_SUCCESS if operation is success otherwise SERV_ERROR.
 */
-
-/*for each service*/
-SERV_Status DSCV_char_by_uuid(connection_t * connection){
-tBleStatus ret;
-uint8_t i;
-uint8_t num_char;
-uint8_t num_services; 
-app_attr_t * charac;
-app_service_t * service;
-char_flags * attr_control_flags;
-
-
-attr_control_flags= &(connection->Node_profile->chrflags);
-num_services = connection->Node_profile->n_service;
-/*step 1. get the correct service*/
-	
-	if((attr_control_flags->services_scanned < num_services) 
-		&& num_services!=0)
-	{
-
-		service = (app_service_t *) list_head(connection->Node_profile->_service);
-
-		for(i=0; i < attr_control_flags->services_scanned; i ++){
-			service = (app_service_t *)list_item_next((void *) service); 
-		}
-
-		if(service==NULL){
-	 	/*something is wrong*/
-	 	return SERV_ERROR;
-	 	}
-		/*at this point we have got the correct service*/
-	 }else{
-	 	/*all attributes have been  discovered*/
-	 	attr_control_flags->char_discovery_success=1;
-	 	attr_control_flags->char_scanned=0;
-	 	return SERV_SUCCESS;
-	 }
-
-/*step 2. discover the characteristics*/
-	num_char = service->n_attr;
-	if(attr_control_flags->char_scanned <  num_char
-		&& num_char!=0)
-	{
-
-		charac = NULL;//(app_attr_t *)list_head(service->_attr);
-
-		for(i=0; i < attr_control_flags->char_scanned; i ++){
-			charac = (app_attr_t *) list_item_next((void *) charac);
-		}
-
-		if(charac==NULL){
- 			/*something is wrong*/
- 		return SERV_ERROR;
- 		}
- 	}else{
- 		/*characteristics already included*/
-		attr_control_flags->services_scanned+=1;
-		return SERV_SUCCESS;
-	}	
-
-/*< at this point is possible to send the charactersitic discover request >*/
-ret = aci_gatt_disc_charac_by_uuid(connection->Connection_Handle,
-	 								0x0001,
-	 								0xFFFF,
-	 								charac->charUuidType,
-	 								(uint8_t*)&(charac->CharUUID)
-	 								);
-
-if(ret != BLE_STATUS_SUCCESS){
-/*something was wrong*/
-return SERV_ERROR;
+SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
+{
+    tBleStatus ret;
+    uint8_t i;
+    uint8_t num_services;
+    uint8_t num_char;
+    app_attr_t * charac;
+    app_service_t * service;
+    char_flags * attr_control_flags;
+    
+    /*let get the total number of services*/
+    num_services = connection->Node_profile->n_service;
+    
+    /*lets get the correct service*/
+    service = connection->Node_profile->services;
+    while(service!=NULL && service->chrflags.char_discovery_success!=0){
+      service = service->next_service;
+    }
+    
+    if(service==NULL){
+        /*all the characterictics for this profile had been discovery*/
+         connection->Node_profile->svflags.attr_success_scanned=1;
+         return SERV_SUCCESS;
+    }
+    
+    
+    /*At this point: its where it'll discovery each characteristic */
+    num_char = service->n_attr;
+    attr_control_flags = &service->chrflags;
+    /*validate that this is the correct characteristic*/
+    if( (num_char==0) || (attr_control_flags->char_scanned >= attr_control_flags->char_to_scan)){
+    /*this profile does not have chatacteristics to discover*/
+      connection->Node_profile->svflags.attr_success_scanned=1;
+      return SERV_SUCCESS;
+    }
+    /*retreive the correct charateristic to scan*/
+    charac = service->attrs;
+    
+    for(i=0; i < attr_control_flags->char_scanned; i++)
+    {
+      charac = charac->next_attr;
+    }
+    
+    if(charac==NULL){
+      /*something is wrong */
+      return SERV_ERROR;
+    }
+    
+   /*< at this point is possible to send the charactersitic discover request >*/
+    
+   ret = aci_gatt_disc_charac_by_uuid(connection->Connection_Handle,
+                                      0x0001,
+                                      0xFFFF,
+				      charac->charUuidType,
+                                      (uint8_t*)&(charac->CharUUID)
+                                      ); 
+    
+    
+  if(ret != BLE_STATUS_SUCCESS){
+    /*something was wrong*/
+      return SERV_ERROR;
+  }
+  
+  attr_control_flags->char_scanned+=1;
+  /*a characteristic have been discovered*/ 
+  return  SERV_SUCCESS;
+    
 }
 
-attr_control_flags->char_scanned+=1;
-/*a characteristic have been discovered*/
-return  SERV_SUCCESS;
-
-}
 
 /**
 * @brief  This function is called for discovery a services without know their uuid.

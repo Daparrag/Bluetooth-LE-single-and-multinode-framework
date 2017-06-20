@@ -81,7 +81,7 @@ DEVICE_NOT_CONNECTED			/*!< device set as not connected after many connetion set
 typedef struct{
   uint8_t services_to_find;
   uint8_t services_success_scanned;   /*!< flag fire to indicate that all of the services fot this profile had been scanned >*/  
-  uint8_t service_discovery_success;
+  uint8_t attr_success_scanned;
 }sv_ctrl_flags;
 
 typedef struct{
@@ -276,7 +276,8 @@ typedef struct
 {
   net_flags flags;
   uint8_t num_device_found;           /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
-  uint8_t num_device_connected;           /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
+  uint8_t num_device_connected;        /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
+  uint8_t num_device_serv_discovery;    /*<! this indicates the number of per devices that had successfully scanned their services_characteristic>*/
   dv_state_t device_cstatus;            /*!< status of the device in this network*/
   #ifdef MULTINODE
   connection_t mMSConnection[EXPECTED_NODES]; /*<! here one connection per node mangement by the application >*/
@@ -288,7 +289,7 @@ typedef struct
 
 /*****************************EVENT HANDLER STRUCTURES**********************************************/
 typedef struct {
-  uint8_t event_type;
+  uint16_t event_type;
   void * evt_data;
 }event_t;
 

@@ -14,7 +14,7 @@ const uint8_t DEVICE_BDADDR[] =  { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1 }; /*devic
 const char local_name[] = {AD_TYPE_COMPLETE_LOCAL_NAME,'B','L','E','-','U','N','O'}; /*device name*/
 //const app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
 //const app_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
-const app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
+//const app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
 /************************************************************/
 
 tBleStatus(*const  GAP_INIT_FUNC [BLE_ARCH_MASK+1])(uint8_t ,uint8_t ,uint8_t ,uint16_t* ,
@@ -226,80 +226,6 @@ APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
     return APP_SUCCESS;
 }
 
-/**
-  * @brief  This function management the node advertisement procedure called by the server.
-  * @param  void * advertise_conf : user configuration (optional)
-  * @param  uint8_t scanres_data_size :scan respounse datasize (default 0)
-  * @param  void * scanres_data:scan respounse data (default NULL)
-  * @param  uint8_t serviceuuidlength:service uuid length (default 0)
-  * @param  void * serviceuuidlist:service uuid list (default NULL)
-  * @retval APP_Status: Value indicating success or error code.
-  */
-
-APP_Status APP_set_advertise_BLE(void * advertise_conf, 
-                                uint8_t scanres_data_size,
-                                void * scanres_data,
-                                uint8_t serviceuuidlength, 
-                                void * serviceuuidlist){/*server generate advertisements to clients*/
-  tBleStatus ret;
-  app_advertise_t * user_config;
-/*check for respouse data*/  
-  if(scanres_data==NULL){
-    /*not advertisement response data*/
-    hci_le_set_scan_resp_data(0,NULL);
-  }else{
-    /*set the hci command for scan respouse data in the advertisement event*/
-    hci_le_set_scan_resp_data(scanres_data_size,(uint8_t * ) scanres_data);
-  }
-
-/*check for advertise config*/
-  if(advertise_conf==NULL){
-
-    if(   GET_ROLE(bnrg_expansion_board)!= (GAP_PERIPHERAL_ROLE_IDB04A1 || GAP_BROADCASTER_ROLE_IDB04A1 || GAP_PERIPHERAL_ROLE_IDB05A1 || GAP_BROADCASTER_ROLE_IDB05A1)){
-              PRINTF("There is no possible to setup the device in adverticement mode if it is not in GAP_PERIPHERAL_ROLE or GAP_BROADCASTER_ROLE please set it in app_ble.h/n");
-         }
-    /*uses default configuration*/
-      ret = aci_gap_set_discoverable(AV_default_config.adveventtype,
-                                     AV_default_config.advintervalmin,
-                                     AV_default_config.advintervalmax,
-                                     AV_default_config.advaddrstype,
-                                     AV_default_config.advfilterpoli,
-                                     sizeof(local_name),
-                                     local_name,
-                                     serviceuuidlength,
-                                     (uint8_t*)serviceuuidlist,
-                                     AV_default_config.slconnintervalmin,
-                                     AV_default_config.slconnintervalmax
-                                    );
-
-  }else{
-    /*uses user configuration*/
-    user_config=(app_advertise_t *) advertise_conf;
-
-    ret = aci_gap_set_discoverable( user_config->adveventtype,
-                                    user_config->advintervalmin,
-                                    user_config->advintervalmax,
-                                    user_config->advaddrstype,
-                                    user_config->advfilterpoli,
-                                    sizeof(local_name),
-                                    local_name,
-                                    serviceuuidlength,
-                                    (uint8_t*)serviceuuidlist,
-                                    user_config->slconnintervalmin,
-                                    user_config->slconnintervalmax
-                                    );
-  }
-
-if (ret != BLE_STATUS_SUCCESS){
-     return APP_ERROR;
-   }
-
-   return APP_SUCCESS;
-
-}
-
-
-
 
 /*user control functions*/
 
@@ -383,6 +309,37 @@ void * APP_get_attribute_BLE(app_service_t * service, void *attr){
   
   return temp_att;
 
+}
+
+
+/**
+  * @brief  This function retreve the services presents in the profile.
+  * @param app_service_t * service: service which contain a set of attributes
+  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
+  * @APP_Status: Value indicating success or error code.
+  */
+uint8_t get_harware_version(void){
+return bnrg_expansion_board;
+}
+
+/**
+  * @brief  This function retreve the services presents in the profile.
+  * @param app_service_t * service: service which contain a set of attributes
+  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
+  * @APP_Status: Value indicating success or error code.
+  */
+const char * get_local_name (void){
+  return local_name;
+}
+
+/**
+  * @brief  This function retreve the services presents in the profile.
+  * @param app_service_t * service: service which contain a set of attributes
+  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
+  * @APP_Status: Value indicating success or error code.
+  */
+uint8_t  get_local_name_size (void){
+  return (sizeof(local_name));
 }
 
 

@@ -5,6 +5,8 @@
 
 #include <app_ble.h>
 #include <network.h>
+#include <eventhandler.h>
+
 
 typedef enum TEST{
 	TEST_SUCCESS=0x0,

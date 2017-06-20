@@ -10,6 +10,7 @@
 
 
 #include <ble_firmware.h>
+#include <network.h>
 
 #ifdef DEBUG
 #include "debug.h"
@@ -30,5 +31,6 @@ void HCI_Event_Handler_CB(void *pckt);
 uint8_t HCI_new_Event_CB(void);
 event_t * HCI_Get_Event_CB(void);
 void HCI_clean_last_Event_CB(void);
+void HCI_Event_Handler_CB_(void *pckt);
 
 #endif /* _EVT_HAHDLER_H_ */

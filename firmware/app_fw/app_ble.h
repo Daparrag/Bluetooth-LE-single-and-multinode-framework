@@ -17,7 +17,7 @@
 *GAP_PERIPHERAL_ROLE
 *GAP_BROADCASTER_ROLE
 *GAP_CENTRAL_ROLE
-*GAP_PERIPHERAL_ROLE
+*GAP_OBSERVER_ROLE
 */
 
 #ifndef CONCAT_AUX
@@ -29,7 +29,8 @@
 #endif
 
 #ifndef ROLE
-#define ROLE GAP_CENTRAL_ROLE
+#error you have to dedefine one of the following roles GAP_PERIPHERAL_ROLE,\
+       GAP_BROADCASTER_ROLE, GAP_OBSERVER_ROLE or GAP_CENTRAL_ROLE in blefw_conf.h.         
 #endif
 
 
@@ -127,11 +128,11 @@ APP_Status APP_init_BLE_Profile(app_profile_t * profile);/*init the BLE app*/
 APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service);/*add BLE services*/
 APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr);/*add BLE attribute*/
 //APP_Status APP_set_discovery_BLE(void * dicovery_config);/*this is used for receive advertisements called by clients*/
-APP_Status APP_set_advertise_BLE(void * advertise_conf, 
-                                uint8_t scanres_data_size,
-                                void * scanres_data,
-                                uint8_t serviceuuidlength, 
-                                void * serviceuuidlist);/*server generate advertisements to clients*/
+//APP_Status APP_set_advertise_BLE(void * advertise_conf, 
+//                                uint8_t scanres_data_size,
+//                                void * scanres_data,
+//                                uint8_t serviceuuidlength, 
+//                                void * serviceuuidlist);/*server generate advertisements to clients*/
 //APP_Status APP_create_connection_BLE(void *connect_config, 
 //                                    uint8_t peer_addrtype, 
 //                                    void * peer_addrs);/*used by setup connection by the master node*/
@@ -149,7 +150,10 @@ void * APP_get_direct_addrs_BLE(int * size);/* used for retreive the addrs of th
 
 void * APP_get_direct_name_BLE(int * size); /*used for retrieve the name of the BLE device*/
 
+uint8_t get_harware_version(void); /*return the harware version*/
 
+const char * get_local_name (void);/*return pointer to the local name*/
 
+uint8_t  get_local_name_size (void);/*return the size of the local name*/
 
 #endif /* PTP_BLE_H */

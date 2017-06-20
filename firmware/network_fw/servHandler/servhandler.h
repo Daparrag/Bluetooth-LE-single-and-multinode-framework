@@ -33,6 +33,8 @@
 
 
 void service_handler(connection_t * connection, net_flags * flags);
+SERV_Status DSCV_primary_services_by_uuid(connection_t * connection); /*primitive used for discover services characterized by a specific uuid*/
+SERV_Status DSCV_primary_char_by_uuid(connection_t * connection);
 
 
 

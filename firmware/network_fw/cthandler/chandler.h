@@ -96,6 +96,8 @@ CHADLE_Status CH_create_connection_BLE(void *connect_config,
 
 CHADLE_Status CH_Connection_Complete_BLE(connection_t * connection, uint16_t handle, uint8_t  peer_addrs[6]);
 
+CHADLE_Status CH_Connection_Complete_perispheral_BLE(connection_t * connection, uint16_t handle, uint8_t peer_addrs[6]);
+
 
 CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config);
 

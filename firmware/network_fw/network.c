@@ -25,19 +25,29 @@ network_t network;
 static void network_set_wait_end_procedure(void);
 static void network_clean_wait_end_procedure(void);
 static uint8_t network_get_wait_end_procedure(void);
-static connection_t * NET_Get_currentConnection_CB(void);
 static NET_Status network_process_central(event_t * event);
 static NET_Status network_process_pherispheral(event_t * event);
-static connection_t *  NET_Connection_to_stablished_CB(void);
-static connection_t * NET_get_connection_by_address_BLE(uint8_t * addrss);
 static uint8_t validate_new_pherispheral_address(uint8_t *peer_address);
 static void init_device(void);
-static void connection_unestablished_toggle(void);
-static void connection_stablished_toggle(void);
+
 static void init_service_handler(void);
 static void init_service_handler(void);
-static connection * NET_get_connection_to_service_Scan_BLE(void);
-static connection * NET_get_connection_to_char_Scan_BLE(void);
+
+static connection_t * NET_Get_currentConnection_CB(void);
+static connection_t * NET_Connection_to_stablished_CB(void);
+static connection_t * NET_get_connection_by_address_BLE(uint8_t * addrss);
+static connection_t * NET_get_connection_to_service_Scan_BLE(void);
+static connection_t * NET_get_connection_to_char_Scan_BLE(void);
+static connection_t * NET_get_connection_by_status_CB(uint8_t _status);
+static connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler);
+
+/*led static adverticements*/
+
+static void NET_Control_led_status_BLE(void);
+static void connection_intermidle_toggle(void);
+static void connection_unitialized_toggle(void);
+static void connection_interchange_toggle(void);
+static void connection_ready_toggle(void);
 
 
 /**
@@ -45,9 +55,9 @@ static connection * NET_get_connection_to_char_Scan_BLE(void);
   * @param void.
   * @retval void.
   */
-void connection_stablished_toggle(void){
+void connection_intermidle_toggle(void){
 
-if(led_toggle_count++ > LED_TOGGLE_CONNECTED)
+if(led_toggle_count++ > LED_TOGGLE_INTERMIDLE)
 	{
 		led_toggle_count=0;
 		BSP_LED_Toggle(LED2);
@@ -61,14 +71,46 @@ if(led_toggle_count++ > LED_TOGGLE_CONNECTED)
   * @retval void.
   */
 
-void connection_unestablished_toggle(void){
+void connection_unitialized_toggle(void){
 
-if(led_toggle_count++ > LED_TOGGLE_UNESTABLISHED)
+if(led_toggle_count++ > LED_TOGGLE_UNITIALIZED)
 	{
 		led_toggle_count=0;
 		BSP_LED_Toggle(LED2);
 	}
 }
+
+/**
+  * @brief  This function is used for indicate the connection_unestablished state.
+  * @param void.
+  * @retval void.
+  */
+
+void connection_interchange_toggle(void){
+
+if(led_toggle_count++ > LED_TOGGLE_INTERCHANGE)
+	{
+		led_toggle_count=0;
+		BSP_LED_Toggle(LED2);
+	}
+}
+
+
+/**
+  * @brief  This function is used for indicate the connection_unestablished state.
+  * @param void.
+  * @retval void.
+  */
+
+void connection_ready_toggle(void){
+
+if(led_toggle_count++ > LED_TOGGLE_READY)
+	{
+		led_toggle_count=0;
+		BSP_LED_Toggle(LED2);
+	}
+}
+
 
 
 
@@ -159,14 +201,42 @@ NET_Status ret;
 
 	}
 
- if(!network.flags.connection_stablishment_complete) connection_unestablished_toggle();
- else connection_stablished_toggle();
-
+        NET_Control_led_status_BLE();
+ 
 return ret;
 
 }
 
 
+
+void NET_Control_led_status_BLE(void){
+  switch(network.device_cstatus)
+  {
+  case DEVICE_UNITIALIZED:
+    {
+      connection_unitialized_toggle();
+    }
+    break;
+  case DEVICE_READY_TO_CONNECT:
+    {
+      connection_interchange_toggle();
+    }
+    break;
+    
+  case DEVICE_READY:
+    {
+      connection_ready_toggle();
+    }
+    break;
+  default:
+    {
+      connection_intermidle_toggle();
+      break;
+    }
+  
+  }
+  
+}
 
 
 NET_Status network_process_central(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
@@ -252,7 +322,7 @@ connection_t * connection;
                 			network.num_device_connected+=1;
                 			if(network.num_device_connected == network.num_device_found){
                 				network.device_cstatus=DEVICE_READY_TO_INTERCHANGE;
-                                network.flags.connection_stablishment_complete=1;
+                                                network.flags.connection_stablishment_complete=1;
                 			}
                 			connection->connection_status = ST_CONNECTED_WAIT_DISC;
                 			network_clean_wait_end_procedure();
@@ -278,32 +348,91 @@ connection_t * connection;
 			case DEVICE_READY_TO_INTERCHANGE:
 			{
 				if(event!=NULL){
+                                  switch(event->event_type)
+                                  {
+                                  case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
+                                    {
+                                       evt_gatt_procedure_complete * pr =(evt_gatt_procedure_complete *) event->evt_data; 
+                                       if(pr->error_code != BLE_STATUS_SUCCESS){
+                                         PRINTDEBUG(" An Error: (0x%04x) occur in the discovery process please check all the paramters\n", pr->error_code);
+                                         return NET_ERROR; 
+                                          
+                                       }
+                                       
+                                       connection = NET_get_connection_by_chandler_BLE(pr->conn_handle);
+                                       
+                                       if(connection==NULL){
+                                          PRINTDEBUG("An Error occur in the discovery process because an invalid connection handler has been received please check it. \n");
+                                          return NET_ERROR;
+                                       }
+                                       
+                                      network_clean_wait_end_procedure(); 
+                                       
+                                       
+                                    }
+                                    break;
+                                    
+                                  }
 
-				}else if((network_get_wait_end_procedure()==0) && (network.net_flags.services_discovery_complete!=0)){
-					connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
+				}else if((network_get_wait_end_procedure()==0) && (network.flags.connection_stablishment_complete!=0)){
+					if(network.num_device_serv_discovery==network.num_device_connected) network.device_cstatus =  DEVICE_READY;
+                                        connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
+                                        if((connection==NULL)){
+                                        /*something is wrong*/
+                                          return NET_ERROR;
+                                        }
 					switch(connection->service_status)
 					{
 						case ST_SERVICE_DISCOVERY:
 						{
 							if(DISC_SERVICE==FIND_SPE_SERVICE)serv_ret = DSCV_primary_services_by_uuid(connection);
+                                                        
+                                                       
 
 							if(serv_ret!=SERV_SUCCESS){
 							PRINTDEBUG(" error occur during the discovery services procedure DSCV_primary_services_by_uuid please check it \n");
 							return NET_ERROR;
 							}
-
-							if(connection->Node_profile->svflags.service_discovery_success)
-
-								connection->service_status = ST_CHAR_DISCOVERY;
-
-								
+                                                        
+                                                        
+                                                        if(connection->Node_profile->svflags.services_success_scanned==1){      
+                                                            connection->service_status = ST_CHAR_DISCOVERY;
+                                                            return NET_SUCCESS;
+                                                        }
+                                                        
+                                                        
+                                                          network_set_wait_end_procedure();
 
 						}
 						break;
 
 						case ST_CHAR_DISCOVERY:
 						{
-
+                                                        if(DISC_CHAR==FIND_SPE_CHAR) serv_ret = DSCV_primary_char_by_uuid(connection);
+                                                        
+                                                        if(serv_ret!=SERV_SUCCESS)
+                                                        {
+                                                            PRINTDEBUG(" error occur during the discovery characterictics procedure DSCV_primary_char_by_uuid please check it \n");
+                                                            return NET_ERROR;
+                                                        }
+                                                        
+                                                         if((connection->Node_profile->svflags.attr_success_scanned==1) 
+                                                            && (connection->Node_profile->svflags.services_success_scanned!=1))
+                                                         {
+                                                           /*this status is not possible something is wrong*/
+                                                           PRINTDEBUG(" Error, It is not possible to scan atributes witout first finish the scanning services please check it\n");
+                                                           return NET_ERROR;
+                                                         }else if ((connection->Node_profile->svflags.attr_success_scanned==1) 
+                                                                   && (connection->Node_profile->svflags.services_success_scanned==1))
+                                                          {
+                                                                   network.num_device_serv_discovery+=1;
+                                                                   connection->connection_status =  ST_STABLISHED;
+                                                                   return  NET_SUCCESS;
+                                                          }
+                                                        
+                                                        
+                                                        network_set_wait_end_procedure();
+                                                        
 						}
 						break;
 
@@ -311,6 +440,11 @@ connection_t * connection;
 				}
 			}
 			break;
+                        case DEVICE_READY:
+                        {
+                          
+                        }
+                        break;
 
 		}
 
@@ -338,11 +472,12 @@ connection_t * connection;
 
 				}
 				break;
-				case DEVICE_ADVERTISEMENT_MODE{
+                        case DEVICE_ADVERTISEMENT_MODE:
+                          {
 					if(event!=NULL){
 						case EVT_LE_CONN_COMPLETE:
 						{
-							connection=NET_get_connection_by_status_CB(ST_UNESTABLISHED)
+							connection=NET_get_connection_by_status_CB(ST_UNESTABLISHED);
 							evt_le_connection_complete *cc =  (void*) event->evt_data;
 							ch_ret = CH_Connection_Complete_perispheral_BLE(connection,cc->handle,cc->peer_bdaddr );
 							
@@ -354,7 +489,7 @@ connection_t * connection;
 							network.num_device_connected+=1;
 
 							if(network.num_device_connected == EXPECTED_CENTRAL_NODES){
-								network.device_cstatus->DEVICE_READY_TO_INTERCHANGE;
+								network.device_cstatus = DEVICE_READY_TO_INTERCHANGE;
 								network_clean_wait_end_procedure();
 							}
 
@@ -393,8 +528,6 @@ connection_t * connection;
 		}
 return NET_SUCCESS;
 }
-
-
 
 
 
@@ -438,9 +571,10 @@ connection_t *  NET_Connection_to_stablished_CB(void){
 connection_t * NET_get_connection_by_status_CB(uint8_t _status){
 	connection_t * connection = NULL;
 	#ifdef MULTINODE
+        uint8_t i;
 	for (i=0; i < network.num_device_found; i++ ){
 		uint8_t connection_status =  network.mMSConnection[i].connection_status;
-		if(connection_status = _status){
+		if(connection_status == _status){
 			connection = &network.mMSConnection[i];
 			break; 
 		}
@@ -497,9 +631,6 @@ if(network.mMSConnection.Node_profile==NULL){
 /*setup_ conection configuration  ok*/
 return NET_SUCCESS;
 }
-
-
-
 
 
 NET_Status net_setup_connection_config(config_connection_t * config, 
@@ -625,22 +756,25 @@ return NULL;
 
 }
 
-connection * NET_get_connection_to_service_Scan_BLE(void){
-	connection * connection=NULL;
-	#ifdef MULTINODE
-		uint8_t i;
-		for (i=0; i <network.num_device_found; i++ ){
-			if(network.mMSConnection[i].Node_profile.service_discovery_success==0) connection = network.mMSConnection[i];
-		}
-	#else
-		if(network.mMSConnection.Node_profile.service_discovery_success==0)connection = network.mMSConnection;
-	#endif
-return 	connection;	
-
+connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler)
+{
+  connection_t * connection = NULL;
+  uint16_t C_Handle;
+  
+  #ifdef MULTINODE
+    uint8_t i;
+    for (i = 0; i < network.num_device_connected; i ++ )
+    {
+        C_Handle = network.mMSConnection[i].Connection_Handle;
+        if(C_Handle == chandler ){
+          connection = &network.mMSConnection[i];
+          break;
+        }
+    }
+  #else
+      C_Handle = network.mMSConnection.Connection_Handle;
+    if(C_Handle == chandler)connection = &network.mMSConnection;
+  #endif
+return connection;
 }
 
-
-connection * NET_get_connection_to_char_Scan_BLE(void){
-	return NULL;
-
-}

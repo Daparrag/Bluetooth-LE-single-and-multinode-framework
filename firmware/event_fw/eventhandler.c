@@ -153,12 +153,29 @@ void HCI_Event_Handler_CB_(void *pckt){
                                    /*IDB04A1*/
                                    }
                                    break;
-
-	 		   
-
 	 		   }
 	 	}
-	 	break; 
+	 	break;
+                case EVT_VENDOR:
+                {
+                  evt_blue_aci * blue_evt = (void*)event_pckt->data;
+                    switch(blue_evt->ecode)
+                    {
+                        case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
+                          {
+                            _event.event_type=EVT_BLUE_GATT_PROCEDURE_COMPLETE;
+                            evt_gatt_procedure_complete * pr = (void*)blue_evt->data;
+                              _event.evt_data = pr;
+                              network_process(&_event);
+                          }
+                          break;
+                      
+                    
+                    }
+                    
+                }
+                break;
+                
   }
 }
 
@@ -200,8 +217,8 @@ uint8_t index_queue;
 	 		   	 case EVT_LE_ADVERTISING_REPORT:
 	 		   	 {
 	 		   	 	
-                                    le_advertising_info *pr = (le_advertising_info*) (((uint8_t*)evt->data)+1);
-                                    _events[index_queue].event_val.event_type = EVT_LE_ADVERTISING_REPORT;
+                                 //   le_advertising_info *pr = (le_advertising_info*) (((uint8_t*)evt->data)+1);
+                                 //   _events[index_queue].event_val.event_type = EVT_LE_ADVERTISING_REPORT;
                              
                                     // BSP_LED_On(LED2);
                                     // while(1);
