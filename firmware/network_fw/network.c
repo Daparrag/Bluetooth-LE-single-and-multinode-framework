@@ -25,8 +25,7 @@ network_t network;
 static void network_set_wait_end_procedure(void);
 static void network_clean_wait_end_procedure(void);
 static uint8_t network_get_wait_end_procedure(void);
-static NET_Status network_process_central(event_t * event);
-static NET_Status network_process_pherispheral(event_t * event);
+static NET_Status network_process_conn_oriented(event_t * event);
 static uint8_t validate_new_pherispheral_address(uint8_t *peer_address);
 static void init_device(void);
 
@@ -154,12 +153,37 @@ NET_Status init_network(net_type_t net_type, dv_type_t device_type ,network_t **
 
 void init_device(void){
 
-    dv_state_t device_init_config =  DEVICE_UNITIALIZED;
+    dv_state_t device_init_config; 
 
-	if (device_role == DEVICE_CENTRAL)            device_init_config = DEVICE_DISCOVERY_MODE;
-	if (device_role == DEVICE_PHERISPHERAL)       device_init_config = DEVICE_ADVERTISEMENT_MODE;
-	if (device_role == DEVICE_BROADCASTER)        device_init_config = DEVICE_ADVERTISEMENT_MODE;
-  	if (device_role == DEVICE_OBSERVER)             device_init_config = DEVICE_SCAN_MODE;
+    switch (device_role)
+    {
+      case DEVICE_CENTRAL:
+      {
+        device_init_config = DEVICE_DISCOVERY_MODE;
+        
+      }
+      break;
+      case DEVICE_PHERISPHERAL:
+      {
+        device_init_config = DEVICE_ADVERTISEMENT_MODE;
+      }
+      break;
+      case DEVICE_BROADCASTER:
+      {
+        device_init_config = DEVICE_ADVERTISEMENT_MODE;
+      }
+      break;
+      case DEVICE_OBSERVER:
+      {
+        device_init_config = DEVICE_SCAN_MODE;
+      }
+      break;
+    default:
+     device_init_config =  DEVICE_UNITIALIZED;
+     break;
+      
+    }
+    
 network.device_cstatus = device_init_config;
 
 }
@@ -192,14 +216,14 @@ NET_Status ret;
 	switch(device_role){
 		case DEVICE_CENTRAL:
 		{
-			ret = network_process_central(event);
+			ret = network_process_conn_oriented(event);
                         if(ret != NET_SUCCESS) while(1);
 		}
 		break;
 
 		case DEVICE_PHERISPHERAL:
 		{
-			ret = network_process_pherispheral(event);
+			ret = network_process_conn_oriented(event);
 		}
 		break;
 
@@ -243,406 +267,292 @@ void NET_Control_led_status_BLE(void){
 }
 
 
-NET_Status network_process_central(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
+NET_Status network_process_conn_oriented(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
 
 CHADLE_Status ch_ret;
 SERV_Status   serv_ret;
 connection_t * connection;
-
-	if(device_role==DEVICE_CENTRAL){
-		switch(network.device_cstatus){
+ 
+	switch(network.device_cstatus)
+	{
 			case DEVICE_UNITIALIZED:
 			{
-				 PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
-				 return NET_ERROR;
+			 	PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
+			 	return NET_ERROR;
 			}
 			break;
-
+			
 			case DEVICE_DISCOVERY_MODE:
 			{
-				if(event!=NULL){
+				if(device_role!=DEVICE_CENTRAL)
+				{
+					PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
+					return NET_ERROR;
+				}
+				
+				if(event!=NULL)
+				{
 					switch (event->event_type){
+					
 						case EVT_LE_ADVERTISING_REPORT:
 						{
 							connection = NET_Get_currentConnection_CB();
-							if(connection!=NULL){
+							if(connection!=NULL)
+							{
 								le_advertising_info *pr = (le_advertising_info*) event->evt_data; 
-                                                               if(!validate_new_pherispheral_address(pr->bdaddr))break;
-                                                                ch_ret = CH_new_device_found_BLE(connection, (void *) pr);
-                                                
-
-                                                                if(ch_ret!=CHADLE_SUCCESS){
-                                                                  PRINTDEBUG(" An Error occur during CH_new_device_found_BLE procedure please check the parameters\n");
-                                                                  return NET_ERROR;
-                                                                }
-
-                                                            network.num_device_found+=1;
-
-                                                            connection->connection_status=ST_CREATE_CONNECTION;
+								if(!validate_new_pherispheral_address(pr->bdaddr))break;
+								
+								ch_ret = CH_new_device_found_BLE(connection, (void *) pr);
+								
+								if(ch_ret!=CHADLE_SUCCESS)
+								{
+									PRINTDEBUG(" An Error occur during CH_new_device_found_BLE procedure please check the parameters\n");
+									return NET_ERROR;
+								}
+								
+								network.num_device_found+=1;
+								
+								connection->connection_status=ST_CREATE_CONNECTION;
 							}
-                                                        
-							if(network.num_device_found == EXPECTED_NODES){
-                                                            network.device_cstatus=DEVICE_READY_TO_CONNECT;
-                                                            network_clean_wait_end_procedure();
-                                                        }
-                                               
-						}
-						break;
-
-					}
-				
-				}else if(network_get_wait_end_procedure()==0){
-					 if(DISCOVERY_MODE == GENERAL_DISCOVERY) ch_ret= CH_run_discovery_BLE ();/*issue*/
-            		 if(DISCOVERY_MODE == SELECTIVE_DISCOVERY) ch_ret = CH_run_selective_discovery_BLE();
-
-            		 if(ch_ret!=CHADLE_SUCCESS){
-            		 	PRINTDEBUG(" An Error occur during general-discovery-setup please check the configuration parameters\n");
-            		 	return NET_ERROR;
-            		 }
-
-            		 network_set_wait_end_procedure();
-				}
-			}
-			break;
-
-			case DEVICE_READY_TO_CONNECT:
-			{
-				if(event!=NULL){
-					switch (event->event_type){
-						case EVT_LE_CONN_COMPLETE:
-						{
-					/*execute the connection complete procedure*/
 							
-                			evt_le_connection_complete *cc =  (void*) event->evt_data;
-
-                			connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
-                			ch_ret = CH_Connection_Complete_BLE(connection,cc->handle,cc->peer_bdaddr);
-
-                			if(ch_ret!=CHADLE_SUCCESS){
-                 				  	PRINTDEBUG(" An Error occur during CH_Connection_Complete_BLE procedure please check the parameters\n");
-                 				  	return NET_ERROR;
-                 			}
-
-                			network.num_device_connected+=1;
-                			if(network.num_device_connected == network.num_device_found){
-                				network.device_cstatus=DEVICE_READY_TO_INTERCHANGE;
-                                                network.flags.connection_stablishment_complete=1;
-                			}
-                			connection->connection_status = ST_CONNECTED_WAIT_DISC;
-                			network_clean_wait_end_procedure();
-
-
+							if(network.num_device_found == EXPECTED_NODES)
+							{
+								network.device_cstatus=DEVICE_READY_TO_CONNECT;
+								network_clean_wait_end_procedure();
+							}
 						}
 						break;
+						
 					}
-				}else if(network_get_wait_end_procedure()==0){
-					connection=NET_get_connection_by_status_CB(ST_CREATE_CONNECTION);
-					ch_ret = CH_run_create_connection_BLE(connection);
-
-						if(ch_ret!=CHADLE_SUCCESS){
-                 			PRINTDEBUG(" An Error occur during CH_run_create_connection_BLE procedure please check the parameters\n");
-                 			return NET_ERROR;
-                 		}
-
+			
+				}else if(network_get_wait_end_procedure()==0)
+				{
+					if(DISCOVERY_MODE == GENERAL_DISCOVERY) ch_ret= CH_run_discovery_BLE ();/*issue*/
+					if(DISCOVERY_MODE == SELECTIVE_DISCOVERY) ch_ret = CH_run_selective_discovery_BLE();
+					
+					if(ch_ret!=CHADLE_SUCCESS)
+					{
+						PRINTDEBUG(" An Error occur during general-discovery-setup please check the configuration parameters\n");
+						return NET_ERROR;
+					}
+					
 					network_set_wait_end_procedure();
 				}
-
 			}
 			break;
-			case DEVICE_READY_TO_INTERCHANGE:
+		
+			case DEVICE_ADVERTISEMENT_MODE:
 			{
+				if(device_role!=DEVICE_PHERISPHERAL){
+					PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
+					return NET_ERROR;
+				}
+				
 				if(event!=NULL){
-                                  switch(event->event_type)
-                                  {
-                                  case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
-                                    {
-                                       evt_gatt_procedure_complete * pr =(evt_gatt_procedure_complete *) event->evt_data; 
-                                       if(pr->error_code != BLE_STATUS_SUCCESS){
-                                         PRINTDEBUG(" An Error: (0x%04x) occur in the discovery process please check all the paramters\n", pr->error_code);
-                                         return NET_ERROR; 
-                                          
-                                       }
-                                       
-                                       connection = NET_get_connection_by_chandler_BLE(pr->conn_handle);
-                                       
-                                       if(connection==NULL){
-                                          PRINTDEBUG("An Error occur in the discovery process because an invalid connection handler has been received please check it. \n");
-                                          return NET_ERROR;
-                                       }
-                                       
-                                      network_clean_wait_end_procedure(); 
-                                       
-                                       
-                                    }
-                                    break;
-                                    
-                                  }
-
-				}else if((network_get_wait_end_procedure()==0) && (network.flags.connection_stablishment_complete!=0)){
-                                  
-                                  if(network.num_device_serv_discovery == network.num_device_connected) {
-                                    network.device_cstatus =  DEVICE_READY;
-                                    return NET_SUCCESS;
-                                  }
-                                        connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
-                                       
-                                        if((connection==NULL)){
-                                        /*something is wrong*/
-                                          return NET_ERROR;
-                                        }else if( (connection->Node_profile->n_service > 0 && connection->Node_profile->services==NULL) || (connection->Node_profile==NULL))
-                                          {
-                                          PRINTDEBUG("Error: there is not a correct profile service association.\n Please verfy that you set up correctly the service and profile to this connection \n using the functions APP_add_BLE_Service, APP_add_BLE_attr, and net_setup_profile_definition \n");
-                                          return NET_ERROR;                        
-                                        }
-                                                     
-					switch(connection->service_status)
-					{
-						case ST_SERVICE_DISCOVERY:
-						{
-							if(DISC_SERVICE==FIND_SPE_SERVICE)serv_ret = DSCV_primary_services_by_uuid(connection);
-                                                        
-                                                       
-
-							if(serv_ret!=SERV_SUCCESS){
-							PRINTDEBUG(" error occur during the discovery services procedure DSCV_primary_services_by_uuid please check it \n");
-							return NET_ERROR;
-							}
-                                                        
-                                                        
-                                                        if(connection->Node_profile->svflags.services_success_scanned==1){      
-                                                            connection->service_status = ST_CHAR_DISCOVERY;
-                                                            return NET_SUCCESS;
-                                                        }
-                                                        
-                                                        
-                                                          network_set_wait_end_procedure();
-
-						}
-						break;
-
-						case ST_CHAR_DISCOVERY:
-						{
-                                                        if(DISC_CHAR==FIND_SPE_CHAR) serv_ret = DSCV_primary_char_by_uuid(connection);
-                                                        
-                                                        if(serv_ret!=SERV_SUCCESS)
-                                                        {
-                                                            PRINTDEBUG(" error occur during the discovery characterictics procedure DSCV_primary_char_by_uuid please check it \n");
-                                                            return NET_ERROR;
-                                                        }
-                                                        
-                                                         if((connection->Node_profile->svflags.attr_success_scanned==1) 
-                                                            && (connection->Node_profile->svflags.services_success_scanned!=1))
-                                                         {
-                                                           /*this status is not possible something is wrong*/
-                                                           PRINTDEBUG(" Error, It is not possible to scan atributes witout first finish the scanning services please check it\n");
-                                                           return NET_ERROR;
-                                                         }else if ((connection->Node_profile->svflags.attr_success_scanned==1) 
-                                                                   && (connection->Node_profile->svflags.services_success_scanned==1))
-                                                          {
-                                                                   network.num_device_serv_discovery+=1;
-                                                                   connection->connection_status =  ST_STABLISHED;
-                                                                   reset_profile_flags(connection->Node_profile);
-                                                                   return  NET_SUCCESS;
-                                                          }
-                                                        
-                                                        
-                                                        network_set_wait_end_procedure();
-                                                        
-						}
-						break;
-
-					}
-				}
-			}
-			break;
-                        case DEVICE_READY:
-                        {
-                          
-                        }
-                        break;
-
-		}
-
-	}else{
-		PRINTDEBUG(" Error: This network process is not according with your device role please check it\n");
-		return NET_ERROR;
-	}
-        
-
-return NET_SUCCESS;
-}
-
-
-
-NET_Status network_process_pherispheral(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
-CHADLE_Status ch_ret;
-SERV_Status   serv_ret;
-connection_t * connection;
-
-		if(device_role == DEVICE_PHERISPHERAL){
-			switch(network.device_cstatus){
-				case DEVICE_UNITIALIZED:
-				{
-				 	PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
-				 	return NET_ERROR;
-
-				}
-				break;
-                        case DEVICE_ADVERTISEMENT_MODE:
-                          {
-					if(event!=NULL){
+					switch (event->event_type)
+					{			
 						case EVT_LE_CONN_COMPLETE:
 						{
 							connection=NET_get_connection_by_status_CB(ST_UNESTABLISHED);
 							evt_le_connection_complete *cc =  (void*) event->evt_data;
 							ch_ret = CH_Connection_Complete_perispheral_BLE(connection,cc->handle,cc->peer_bdaddr );
-							
-							if(ch_ret != CHADLE_SUCCESS){
+						
+							if(ch_ret != CHADLE_SUCCESS)
+							{
 								PRINTDEBUG(" An Error occur during CH_Connection_Complete_perispheral_BLE procedure please check the parameters\n");
-                 				return NET_ERROR;
+								return NET_ERROR;
 							}
-
+						
 							network.num_device_connected+=1;
-
-							if(network.num_device_connected == EXPECTED_CENTRAL_NODES){
+				
+							if(network.num_device_connected == EXPECTED_CENTRAL_NODES)
+							{
 								network.device_cstatus = DEVICE_READY_TO_INTERCHANGE;
-                                                                network.flags.connection_stablishment_complete=1;
+								network.flags.connection_stablishment_complete=1;
 								network_clean_wait_end_procedure();
 							}
-
+						
 							connection->connection_status=ST_CONNECTED_WAIT_DISC;
-							
 						}
 						break;
-					}else if(network_get_wait_end_procedure()==0){
-						if(ADVERTICEMENT_MODE == GENERAL_ADVERTICEMENT) ch_ret=CH_run_advertise_BLE(); 
-
-						if(ch_ret!=CHADLE_SUCCESS){
-							PRINTDEBUG(" An Error occur during the adverticement setup procedure please check the parameters\n");
-							return NET_ERROR;
-
-						}
-						network_set_wait_end_procedure();
-
 					}
-
-				}
-				break;
-				case DEVICE_READY_TO_INTERCHANGE:
+				}else if(network_get_wait_end_procedure()==0)
 				{
-                                  if(event!=NULL){
-                                    switch(event->event_type)
-                                     {
-                                     case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
-                                       {
-                                          evt_gatt_procedure_complete * pr =(evt_gatt_procedure_complete *) event->evt_data; 
-                                          if(pr->error_code != BLE_STATUS_SUCCESS){
-                                              PRINTDEBUG(" An Error: (0x%04x) occur in the discovery process please check all the paramters\n", pr->error_code);
-                                              return NET_ERROR; 
-                                          }
-                                          
-                                          connection = NET_get_connection_by_chandler_BLE(pr->conn_handle);
-                                          
-                                          if(connection==NULL){
-                                              PRINTDEBUG("An Error occur in the discovery process because an invalid connection handler has been received please check it. \n");
-                                              return NET_ERROR;
-                                          }
-                                       
-                                            network_clean_wait_end_procedure(); 
-                                          
-                                          
-                                       }
-                                       break;
-                                  
-                                     }
-                                  }else if((network_get_wait_end_procedure()==0) && (network.flags.connection_stablishment_complete!=0)){
-                                        
-                                    if(network.num_device_serv_discovery==network.num_device_connected){
-                                        network.device_cstatus =  DEVICE_READY;
-                                         return NET_SUCCESS;
-                                      } 
-                                        connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
-                                    
-                                    
-                                        if((connection==NULL)){
-                                            /*something is wrong*/
-                                              return NET_ERROR;
-                                        }else if( (connection->Node_profile->n_service > 0 && connection->Node_profile->services==NULL) || (connection->Node_profile==NULL))
-                                          {
-                                          PRINTDEBUG("Error: there is not a correct profile service association.\n Please verfy that you set up correctly the service and profile to this connection \n using the functions APP_add_BLE_Service, APP_add_BLE_attr, and net_setup_profile_definition \n");
-                                          return NET_ERROR;                        
-                                        }
-                                        
-                                        switch(connection->service_status)
-                                        {
-                                          case ST_SERVICE_DISCOVERY:
-                                            {
-                                              if(DISC_SERVICE==FIND_SPE_SERVICE)serv_ret = DSCV_primary_services_by_uuid(connection);
-                                              
-                                              
-                                              if(serv_ret!=SERV_SUCCESS){
-						PRINTDEBUG(" error occur during the discovery services procedure DSCV_primary_services_by_uuid please check it \n");
+					if(ADVERTICEMENT_MODE == GENERAL_ADVERTICEMENT) ch_ret=CH_run_advertise_BLE(); 
+				
+					if(ch_ret!=CHADLE_SUCCESS)
+					{
+						PRINTDEBUG(" An Error occur during the adverticement setup procedure please check the parameters\n");
 						return NET_ERROR;
-                                              }
-                                              
-                                              if(connection->Node_profile->svflags.services_success_scanned==1){      
-                                                    connection->service_status = ST_CHAR_DISCOVERY;
-                                                    return NET_SUCCESS;
-                                                }
-                                              
-                                               network_set_wait_end_procedure();
-                                            }
-                                            break;
-                                           case ST_CHAR_DISCOVERY:
-                                            {
-                                                 if(DISC_CHAR==FIND_SPE_CHAR) serv_ret = DSCV_primary_char_by_uuid(connection);
-                                                 
-                                                 if(serv_ret!=SERV_SUCCESS)
-                                                        {
-                                                            PRINTDEBUG(" error occur during the discovery characterictics procedure DSCV_primary_char_by_uuid please check it \n");
-                                                            return NET_ERROR;
-                                                        }
-                                                 
-                                                  if((connection->Node_profile->svflags.attr_success_scanned==1) 
-                                                            && (connection->Node_profile->svflags.services_success_scanned!=1))
-                                                         {
-                                                           /*this status is not possible something is wrong*/
-                                                           PRINTDEBUG(" Error, It is not possible to scan atributes witout first finish the scanning services please check it\n");
-                                                           return NET_ERROR;
-                                                         }else if((connection->Node_profile->svflags.attr_success_scanned==1) 
-                                                                   && (connection->Node_profile->svflags.services_success_scanned==1))
-                                                         {
-                                                                network.num_device_serv_discovery+=1;
-                                                                connection->connection_status =  ST_STABLISHED;
-                                                                reset_profile_flags(connection->Node_profile);
-                                                                return  NET_SUCCESS;
-                                                         }
-                                                 
-                                                  network_set_wait_end_procedure();
-                                                 
-                                                 
-                                            }
-                                            break;
-                                            
-                                        
-                                        }
-                                    
-                                  }
-                                }
-				break;
-                                case DEVICE_READY:
-                                {
-                          
-                                }
-                                break;
-			}
-
-		}else{
-
-			PRINTDEBUG(" Error: This network process is not according with your device role please check it\n");
-			return NET_ERROR;
+					
+					}
+					network_set_wait_end_procedure();
+					
+				}
+			
 		}
-return NET_SUCCESS;
+		break;
+		case DEVICE_READY_TO_CONNECT:
+		{
+			if(event!=NULL)
+			{
+				switch (event->event_type)
+				{
+					case EVT_LE_CONN_COMPLETE:
+					{
+						/*execute the connection complete procedure*/
+					
+						evt_le_connection_complete *cc =  (void*) event->evt_data;
+					
+						connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
+						ch_ret = CH_Connection_Complete_BLE(connection,cc->handle,cc->peer_bdaddr);
+					
+						if(ch_ret!=CHADLE_SUCCESS)
+						{
+							PRINTDEBUG(" An Error occur during CH_Connection_Complete_BLE procedure please check the parameters\n");
+							return NET_ERROR;
+						}
+					
+						network.num_device_connected+=1;
+						if(network.num_device_connected == network.num_device_found)
+						{
+							network.device_cstatus=DEVICE_READY_TO_INTERCHANGE;
+							network.flags.connection_stablishment_complete=1;
+						}
+						connection->connection_status = ST_CONNECTED_WAIT_DISC;
+						network_clean_wait_end_procedure();
+					
+					
+					}
+					break;
+				}
+			}else if(network_get_wait_end_procedure()==0)
+			{
+				connection=NET_get_connection_by_status_CB(ST_CREATE_CONNECTION);
+				ch_ret = CH_run_create_connection_BLE(connection);
+			
+				if(ch_ret!=CHADLE_SUCCESS)
+				{
+					PRINTDEBUG(" An Error occur during CH_run_create_connection_BLE procedure please check the parameters\n");
+					return NET_ERROR;
+				}
+		
+				network_set_wait_end_procedure();
+			}
+		
+		}
+		break;
+		case DEVICE_READY_TO_INTERCHANGE:
+		{
+			if(event!=NULL)
+			{
+				switch(event->event_type)
+				{
+					case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
+					{
+						evt_gatt_procedure_complete * pr =(evt_gatt_procedure_complete *) event->evt_data; 
+						if(pr->error_code != BLE_STATUS_SUCCESS)
+						{
+							PRINTDEBUG(" An Error: (0x%04x) occur in the discovery process please check all the paramters\n", pr->error_code);
+							return NET_ERROR; 
+						}
+						
+						connection = NET_get_connection_by_chandler_BLE(pr->conn_handle);
+                      
+						if(connection==NULL)
+						{
+							PRINTDEBUG("An Error occur in the discovery process because an invalid connection handler has been received please check it. \n");
+							return NET_ERROR;
+						}
+						
+						network_clean_wait_end_procedure(); 
+						
+					} 
+					break; 
+				}
+			}else if((network_get_wait_end_procedure()==0) 
+					  && (network.flags.connection_stablishment_complete!=0))
+			{
+				if(network.num_device_serv_discovery==network.num_device_connected)
+				{
+					network.device_cstatus =  DEVICE_READY;
+					return NET_SUCCESS;
+				}
+				
+				connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
+				
+				if((connection==NULL))
+				{
+					/*something is wrong*/
+					return NET_ERROR;
+				}else if( (connection->Node_profile->n_service > 0 && connection->Node_profile->services==NULL) || (connection->Node_profile==NULL))
+				{
+					PRINTDEBUG("Error: there is not a correct profile service association.\n Please verfy that you set up correctly the service and profile to this connection \n using the functions APP_add_BLE_Service, APP_add_BLE_attr, and net_setup_profile_definition \n");
+					return NET_ERROR;                        
+				}
+				
+				switch(connection->service_status)
+				{
+					case ST_SERVICE_DISCOVERY:
+					{
+						if(DISC_SERVICE==FIND_SPE_SERVICE)serv_ret = DSCV_primary_services_by_uuid(connection);
+						
+						if(serv_ret!=SERV_SUCCESS)
+						{
+							PRINTDEBUG(" error occur during the discovery services procedure DSCV_primary_services_by_uuid please check it \n");
+							return NET_ERROR;
+						}
+						
+						if(connection->Node_profile->svflags.services_success_scanned==1)
+						{
+							connection->service_status = ST_CHAR_DISCOVERY;
+							return NET_SUCCESS;
+						}
+						
+						network_set_wait_end_procedure();
+					}
+					break;
+					
+					case ST_CHAR_DISCOVERY:
+					{
+						if(DISC_CHAR==FIND_SPE_CHAR) serv_ret = DSCV_primary_char_by_uuid(connection);
+						
+						if(serv_ret!=SERV_SUCCESS)
+						{
+							PRINTDEBUG(" error occur during the discovery characterictics procedure DSCV_primary_char_by_uuid please check it \n");
+							return NET_ERROR;
+						}
+						
+						if((connection->Node_profile->svflags.attr_success_scanned==1) 
+							&& (connection->Node_profile->svflags.services_success_scanned!=1))
+						{
+							/*this status is not possible something is wrong*/
+							PRINTDEBUG(" Error, It is not possible to scan atributes witout first finish the scanning services please check it\n");
+							return NET_ERROR;
+						}else if((connection->Node_profile->svflags.attr_success_scanned==1) 
+								 && (connection->Node_profile->svflags.services_success_scanned==1))
+						{
+							network.num_device_serv_discovery+=1;
+							connection->connection_status =  ST_STABLISHED;
+							reset_profile_flags(connection->Node_profile);
+							return  NET_SUCCESS;
+						}
+						
+						network_set_wait_end_procedure();
+					}
+					break;
+					
+				}
+			}
+		}
+		break;
+		case DEVICE_READY:
+		{
+			
+		}
+		break;
+		}
+return NET_SUCCESS;       
 }
 
 
