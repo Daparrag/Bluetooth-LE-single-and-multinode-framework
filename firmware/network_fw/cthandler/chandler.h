@@ -67,10 +67,10 @@
 #define SLNODES		(0x0002)
 #endif
 #ifndef SCAN_INTV
-#define SCAN_INTV       (0xC8)
+#define SCAN_INTV       (0x60)
 #endif
 #ifndef SCAN_WIN
-#define SCAN_WIN	  (0x010)
+#define SCAN_WIN	  (0x60)
 #endif
 /*additional parameters for selective scanning*/
 #ifndef SCAN_TYPE

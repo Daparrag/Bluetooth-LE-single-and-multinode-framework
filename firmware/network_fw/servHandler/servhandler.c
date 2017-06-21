@@ -126,10 +126,11 @@ sv_ctrl_flags  *serv_control_flags;
 serv_control_flags = &(connection->Node_profile->svflags);
 num_service = connection->Node_profile->n_service;
 
-	if (serv_control_flags->services_to_find!=0 && num_service!=0)
+	if (serv_control_flags->services_to_find > 0 && num_service!=0)
 	{
 		service = (app_service_t *) connection->Node_profile->services;
 		for(i=0;i < num_service-(serv_control_flags->services_to_find); i++ ){
+                  
 			service = (app_service_t *)service->next_service;
 		}
 
@@ -201,6 +202,7 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
     if( (num_char==0) || (attr_control_flags->char_scanned >= attr_control_flags->char_to_scan)){
     /*this profile does not have chatacteristics to discover*/
       connection->Node_profile->svflags.attr_success_scanned=1;
+      attr_control_flags->char_discovery_success=1;
       return SERV_SUCCESS;
     }
     /*retreive the correct charateristic to scan*/

@@ -37,11 +37,11 @@
 #endif
 
 #ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
-#define EXPECTED_NODES 2
+#define EXPECTED_NODES 3
 #define EXPECTED_CENTRAL_NODES 2					
 #else
 #define EXPECTED_NODES 1
-#define EXPECTED_CENTRAL_NODES 2 
+#define EXPECTED_CENTRAL_NODES 1 
 #endif
 
 #ifndef DEVICE_ADDRS_LENGTH

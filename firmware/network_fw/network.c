@@ -31,7 +31,10 @@ static uint8_t validate_new_pherispheral_address(uint8_t *peer_address);
 static void init_device(void);
 
 static void init_service_handler(void);
-static void init_service_handler(void);
+
+
+static void reset_profile_flags(app_profile_t * profile);
+
 
 static connection_t * NET_Get_currentConnection_CB(void);
 static connection_t * NET_Connection_to_stablished_CB(void);
@@ -190,6 +193,7 @@ NET_Status ret;
 		case DEVICE_CENTRAL:
 		{
 			ret = network_process_central(event);
+                        if(ret != NET_SUCCESS) while(1);
 		}
 		break;
 
@@ -375,12 +379,22 @@ connection_t * connection;
                                   }
 
 				}else if((network_get_wait_end_procedure()==0) && (network.flags.connection_stablishment_complete!=0)){
-					if(network.num_device_serv_discovery==network.num_device_connected) network.device_cstatus =  DEVICE_READY;
+                                  
+                                  if(network.num_device_serv_discovery == network.num_device_connected) {
+                                    network.device_cstatus =  DEVICE_READY;
+                                    return NET_SUCCESS;
+                                  }
                                         connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
+                                       
                                         if((connection==NULL)){
                                         /*something is wrong*/
                                           return NET_ERROR;
+                                        }else if( (connection->Node_profile->n_service > 0 && connection->Node_profile->services==NULL) || (connection->Node_profile==NULL))
+                                          {
+                                          PRINTDEBUG("Error: there is not a correct profile service association.\n Please verfy that you set up correctly the service and profile to this connection \n using the functions APP_add_BLE_Service, APP_add_BLE_attr, and net_setup_profile_definition \n");
+                                          return NET_ERROR;                        
                                         }
+                                                     
 					switch(connection->service_status)
 					{
 						case ST_SERVICE_DISCOVERY:
@@ -427,6 +441,7 @@ connection_t * connection;
                                                           {
                                                                    network.num_device_serv_discovery+=1;
                                                                    connection->connection_status =  ST_STABLISHED;
+                                                                   reset_profile_flags(connection->Node_profile);
                                                                    return  NET_SUCCESS;
                                                           }
                                                         
@@ -542,13 +557,20 @@ connection_t * connection;
                                      }
                                   }else if((network_get_wait_end_procedure()==0) && (network.flags.connection_stablishment_complete!=0)){
                                         
-                                        if(network.num_device_serv_discovery==network.num_device_connected) network.device_cstatus =  DEVICE_READY;
+                                    if(network.num_device_serv_discovery==network.num_device_connected){
+                                        network.device_cstatus =  DEVICE_READY;
+                                         return NET_SUCCESS;
+                                      } 
                                         connection = NET_get_connection_by_status_CB(ST_CONNECTED_WAIT_DISC);
                                     
                                     
                                         if((connection==NULL)){
                                             /*something is wrong*/
                                               return NET_ERROR;
+                                        }else if( (connection->Node_profile->n_service > 0 && connection->Node_profile->services==NULL) || (connection->Node_profile==NULL))
+                                          {
+                                          PRINTDEBUG("Error: there is not a correct profile service association.\n Please verfy that you set up correctly the service and profile to this connection \n using the functions APP_add_BLE_Service, APP_add_BLE_attr, and net_setup_profile_definition \n");
+                                          return NET_ERROR;                        
                                         }
                                         
                                         switch(connection->service_status)
@@ -592,6 +614,7 @@ connection_t * connection;
                                                          {
                                                                 network.num_device_serv_discovery+=1;
                                                                 connection->connection_status =  ST_STABLISHED;
+                                                                reset_profile_flags(connection->Node_profile);
                                                                 return  NET_SUCCESS;
                                                          }
                                                  
@@ -620,6 +643,28 @@ connection_t * connection;
 			return NET_ERROR;
 		}
 return NET_SUCCESS;
+}
+
+
+
+void reset_profile_flags(app_profile_t * profile){
+  uint8_t i;
+  app_service_t * service;
+  uint8_t nservices;
+  
+  nservices=profile->n_service;
+  profile->svflags.attr_success_scanned=0;
+  profile->svflags.services_success_scanned=0;
+  profile->svflags.services_to_find = nservices;
+  
+  service = profile->services;
+  
+  for(i=0;i < nservices; i++){
+    if(service==NULL) break;
+        service->chrflags.char_discovery_success=0;
+        service->chrflags.char_scanned=0;
+        service = service->next_service;
+  }  
 }
 
 
@@ -689,7 +734,7 @@ uint8_t index;
 /*check the input*/
 if(profile_def==NULL){
 
-	PRINTF("net_setup_profile_definition: input profile_def could not be NULL \n");
+	PRINTF("net_setup_profile_definition: input profile_def could not be NULL\n");
 	return NET_ERROR;
 }
 
@@ -702,6 +747,11 @@ if(list_index_size-1 >= EXPECTED_NODES || list_index== NULL){
 
 for(i=0; i < list_index_size; i++){
 	index = *list_index++;
+        //app_service_t ** pt = &network.mMSConnection[index].Node_profile->services;
+	//memcpy(network.mMSConnection[index].Node_profile,profile_def,sizeof(app_profile_t));
+        //network.mMSConnection[index].Node_profile->n_service=profile_def->n_service;
+        //pt = &((*profile_def).services);
+        //memcpy((void*)&network.mMSConnection[index].Node_profile->svflags,(void*)&profile_def->svflags,sizeof(sv_ctrl_flags));
 	network.mMSConnection[index].Node_profile=profile_def;
 
 	if(network.mMSConnection[index].Node_profile==NULL){
