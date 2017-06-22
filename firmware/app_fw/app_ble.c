@@ -12,13 +12,10 @@ uint8_t service_list_init=0;            /*!< flag used to initialized the servic
 
 const uint8_t DEVICE_BDADDR[] =  { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1}; /*device addrs*/
 const char local_name[] = {AD_TYPE_COMPLETE_LOCAL_NAME,'B','L','E','-','U','N','O'}; /*device name*/
-//const app_discovery_t DV_default_config = { SCAN_INTV, SCAN_WIN, 0x00,0x01}; /*default configuration for the scan procedure*/
-//const app_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
-//const app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
 /************************************************************/
 
 tBleStatus(*const  GAP_INIT_FUNC [BLE_ARCH_MASK+1])(uint8_t ,uint8_t ,uint8_t ,uint16_t* ,
-                                                 uint16_t* ,uint16_t* ) = {                                             
+                                                    uint16_t* ,uint16_t* ) = { /*architecture independent array, call the correct function according to the architecture version IDB05A1 or IDB04A1*/                                            
 MY_HAVE_IDB0xA1(0, aci_gap_init),                                            
 MY_HAVE_IDB0xA1(1, aci_gap_init)                                                    
 }; /*init_gap_macro*/
@@ -30,7 +27,7 @@ MY_HAVE_IDB0xA1(1, aci_gap_init)
                                               _appearance_char_handle))/*init gap function*/
           
 /******************************Static func************************************************/ 
-static int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion);          
+static int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion);   /*retreive the version of the BLUENRG board*/       
 /*****************************************************************************************/          
 
 /**
@@ -39,7 +36,7 @@ static int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion);
   * @retval APP_Status: Value indicating success or error code.
   */
   
-static int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion){
+int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion){
 
 
   uint8_t status;
@@ -116,7 +113,7 @@ APP_Status APP_Init_BLE(void){/*can be used by any application*/
 }
 
 /**
-  * @brief  This function initialize the profile list.
+  * @brief  This function initialize the profile .
   * @ This function must be called at the begining of the application.
   * @param profile datastructure.
   * @retval APP_Status: Value indicating success or error code.
@@ -129,9 +126,9 @@ APP_Status APP_init_BLE_Profile(app_profile_t * profile){
 
 
 /**
-  * @brief  This function is called to add any Service.
-  * @param  app_profile_t * profile: Profilinf structure.
-  * @param  app_service_t * service: service to include.
+  * @brief  This function is called to add any kind of Service.
+  * @param  app_profile_t * profile: Profile structure.
+  * @param  app_service_t * service: service to be included.
   * @retval APP_Status: Value indicating success or error code.
   */
 
@@ -145,15 +142,14 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
       profile->services=service;
     } else if(profile->services!=service){/*if not check that it is not already included*/
         aux_service_addrs = &profile->services;
-       do{
+       do{/*USED to check if a service was already included to this profile*/
             aux_service_addrs = &((*aux_service_addrs)->next_service);
-            //aux_service= aux_service->next_service;
-            if(*aux_service_addrs==service)break;/*service already included for this profile*/
+            if(*aux_service_addrs==service)break;
          }while(*aux_service_addrs!=NULL);
       
        
        if(*aux_service_addrs==NULL){
-          *aux_service_addrs = service;
+          *aux_service_addrs = service;/**/
        }else if(*aux_service_addrs == service)return APP_ERROR;
        
     }else if (profile->services == service)return APP_ERROR; /*if service is already included return error*/
@@ -165,9 +161,12 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
                           &(service->ServiceHandle));
   if (ret != BLE_STATUS_SUCCESS)
   {
-    /*remove the service form the list list_chop*/
+    
+    /*remove the service if and error occur*/
+    *aux_service_addrs =NULL;
     return APP_ERROR;
   }
+  
   profile->n_service+=1; /*increment the control service counter*/
   profile->svflags.services_to_find+=1;
   profile->svflags.services_success_scanned=0;
@@ -176,8 +175,8 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
 
 /**
   * @brief  This function is called to add any characteristic.
-  * @param  service_uuid: Service uuid value.
-  * @param  service_handle: Pointer to a variable in which the service handle will be saved.
+  * @param  app_service_t * service: Pointer to a service in which the caracteristic will be included.
+  * @param  service, app_attr_t *attr : Characteristic to inlclude.
   * @retval APP_Status: Value indicating success or error code.
   */
 APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
@@ -217,6 +216,7 @@ APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
     
     if (ret != BLE_STATUS_SUCCESS) {
       /*delete the attr entry in the service list*/
+      *aux_attr_addrs=NULL;
       return APP_ERROR;
       
     }  
@@ -225,35 +225,6 @@ APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
     service->chrflags.char_discovery_success=0;
     return APP_SUCCESS;
 }
-
-
-/*user control functions*/
-
-/**
-  * @brief  This function return the default configuration for the BLE app firmware.
-  * @param  void *app_discovery (used for catch the discovery config parameter)
-  * @param  void * app_connection (used for catch the connection config parameter)
-  * @param  void * app_advertise (used for catch the advertise config parameter)
-  * @retval none.
-  */
-
-void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise){
-
-}
-
-
-
-/**
-  * @brief  This function return pointer to the device name.
-  * @param int * size (used for catch the device name size)
-  * @retval void *: void pointer to the name.
-  */
-
-void * APP_get_direct_name_BLE(int * size){
-  *size = sizeof(local_name);
-  return (void *)&(local_name);
-}
-
 
 
 /**
@@ -272,7 +243,9 @@ void * APP_get_direct_addrs_BLE(int * size){
   * @brief  This function retreve the services presents in the profile.
   * @param app_profile_t * profile: profile which contain the services
   * @param app_profile_t * service: pointer used to retreve the serivices in the profile
-  * @APP_Status: Value indicating success or error code.
+  *                                (If it is NULL the function return the first service from the list of services
+                                    If it is different to NULL the function beginning form this input return the next service(if any or NULL) )
+  * @retval void * : Return the service pointer as a void pointer..
   */
 
 void * APP_get_service_BLE(app_profile_t * profile, void  * serv){
@@ -293,10 +266,13 @@ void * APP_get_service_BLE(app_profile_t * profile, void  * serv){
 
 
 /**
-  * @brief  This function retreve the services presents in the profile.
+  * @brief  This function retreve the characteristics associated to a service.
   * @param app_service_t * service: service which contain a set of attributes
-  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
-  * @APP_Status: Value indicating success or error code.
+  * @param void *attr:              pointer used to retreve the attributes associated to this particular service.
+                                    (if it is NULL, return the first attribute associated to this service if any 
+                                     if it is not NULL return then begining from this attribute the function return the next 
+                                      attribute in the chain if any).
+  * @retval void *: The function return a void * associated to the attributed retreaved.
   */
 
 void * APP_get_attribute_BLE(app_service_t * service, void *attr){
@@ -313,30 +289,27 @@ void * APP_get_attribute_BLE(app_service_t * service, void *attr){
 
 
 /**
-  * @brief  This function retreve the services presents in the profile.
-  * @param app_service_t * service: service which contain a set of attributes
-  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
-  * @APP_Status: Value indicating success or error code.
+  * @brief  This function retreve the BLUE-NRG Board's version.
+  * @param void.
+  * @retval uint8_t: Value indicating the version of the bluenrg board (IDB04A1=0 or IDB05A1=1).
   */
 uint8_t get_harware_version(void){
 return bnrg_expansion_board;
 }
 
 /**
-  * @brief  This function retreve the services presents in the profile.
-  * @param app_service_t * service: service which contain a set of attributes
-  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
-  * @APP_Status: Value indicating success or error code.
+  * @brief  This function retreve pointer to the device local name .
+  * @param void.
+  * retval: const char *: pointer associated to the local name.
   */
 const char * get_local_name (void){
   return local_name;
 }
 
 /**
-  * @brief  This function retreve the services presents in the profile.
-  * @param app_service_t * service: service which contain a set of attributes
-  * @param app_profile_t * service: pointer used to retreve the attributes associated to this particular service.
-  * @APP_Status: Value indicating success or error code.
+  * @brief  This function the size of the local name .
+  * @param void.
+  * retval: uint8_t: device name size.
   */
 uint8_t  get_local_name_size (void){
   return (sizeof(local_name));

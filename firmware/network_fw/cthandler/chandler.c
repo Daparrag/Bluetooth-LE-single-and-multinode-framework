@@ -24,15 +24,28 @@ const app_discovery_t DV_default_config = {SCAN_TYPE ,SCAN_INTV, SCAN_WIN, 0x00,
 const config_connection_t CN_default_config = {SCAN_P, SCAN_L, OUR_ADDRS_TYPE, CONN_P1, CONN_P2, LATENCY, SUPERV_TIMEOUT, CONN_L1, CONN_L2};/*connection default configuration*/
 const app_advertise_t  AV_default_config = {ADV_EVT_TYPE, ADV_IT_MIN, ADV_IT_MAX, ADV_ADDR_TYPE, ADV_POLICY, SLAVE_INT_MIN, SLAVE_INT_MAX}; /*advertisement default configuration*/
 /************************************Module Flags*****************************************/
-uint8_t wait_end_procedure = 0;
+
 /******************************Static func************************************************/ 
-//static void connection_handler_broadcast(void);
-//static void connection_handler_error(void);
+
 static CHADLE_Status CH_set_advertise_BLE(void * advertise_conf, 
                                 uint8_t scanres_data_size,
                                 void * scanres_data,
                                 uint8_t serviceuuidlength, 
-                                void * serviceuuidlist);
+                                void * serviceuuidlist);/*handler the general advertisement procedure*/
+
+static CHADLE_Status CH_create_connection_BLE(void *connect_config, 
+                                    uint8_t peer_addrtype, 
+                                    void * peer_addrs);/*handler the general connetion procedure*/
+
+
+static CHADLE_Status CH_set_discovery_BLE(void * dicovery_config);/*handler a general discoverable procedure(ok)*/
+
+static CHADLE_Status CH_set_selective_discovery_BLE(void * dicovery_config);/*handler a selective  discovery procedure (ok)*/
+
+static CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config);/*handler the specific discovery procedure(not implemented yet)*/
+
+static CHADLE_Status CH_set_discovery_limited_BLE(void * dicovery_config); /*handler the limited discovery procedure(not implemented yet)*/
+
 /*****************************************************************************************/
 /*selective discovery function independent of the architecture*/
 /****************************************************************************************/
@@ -43,7 +56,7 @@ static CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
   * @brief  This function is called to setup the discovery configuration into the connection handler module.
   * @param  app_discovery_t * dv_conf: contain the discovery configuration.
   * @retval void.
-  */
+**/
   
 void connection_handler_set_discovery_config(app_discovery_t * dv_conf){
 	DV_config = dv_conf;
@@ -143,7 +156,7 @@ CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config){/*this is us
 
 
 /**
-  * @brief  This function management the node discovery procedure(for specific device).
+  * @brief  This function management the node discovery procedure(for limited device).
   * @param  void * dicovery_config : user configuration (optional)
   * @retval APP_Status: Value indicating success or error code.
   */
@@ -264,6 +277,13 @@ CHADLE_Status CH_Connection_Complete_BLE(connection_t * connection, uint16_t han
 }
 
 
+/**
+  * @brief  This function fires when a connection event is generated in a device configured as a perispheral.
+  * @param  connection_t * connection : the connection that generate this event
+  * @param  uint16_t handle: connection handler associated.
+  * @param  uint16_t handle: central peer device address.
+  * @retval CHADLE_Status: return CHADLE_SUCCESS if any error occur otherwise CHADLE_ERROR
+  */
 CHADLE_Status CH_Connection_Complete_perispheral_BLE(connection_t * connection, uint16_t handle, uint8_t peer_addrs[6]){
   uint8_t i; 
   if(connection==NULL)return CHADLE_ERROR; 
@@ -281,27 +301,23 @@ CHADLE_Status CH_Connection_Complete_perispheral_BLE(connection_t * connection, 
 
 }
 
-
-
-void set_connection_wait_procedure(void){
-  wait_end_procedure = 1;
-}
-
-void clean_connection_wait_procedure(void){
-  wait_end_procedure = 0;
-}
-
-uint8_t get_connection_end_procedute(void){
- return wait_end_procedure;
-}
-
-
+/**
+  * @brief  This function is used to start a general discovery procedure
+  * @param  void.
+  * @retval CHADLE_Status: Value indicating success or error code.
+  */
 CHADLE_Status CH_run_discovery_BLE(void){
 CHADLE_Status ret;
-ret = CH_set_discovery_BLE (DV_config);/*issue*/
+ret = CH_set_discovery_BLE (DV_config);
 return ret;
 
 }
+
+/**
+  * @brief  This function is used to start a selective discovery procedure
+  * @param  void.
+  * @retval CHADLE_Status: Value indicating success or error code.
+  */
 
 CHADLE_Status CH_run_selective_discovery_BLE(void){
   CHADLE_Status ret;
@@ -310,6 +326,12 @@ CHADLE_Status CH_run_selective_discovery_BLE(void){
 
 }
 
+
+/**
+  * @brief  This function is used to create a connection with an specific device.
+  * @param  connection_t * connection: pointer to a Specific connection to create
+  * @retval CHADLE_Status: Value indicating success or error code.
+  */
 CHADLE_Status CH_run_create_connection_BLE(connection_t * connection){
  CHADLE_Status ret;
 
@@ -319,12 +341,22 @@ return ret;
 }
 
 
+/**
+  * @brief  This function an advertisement procedure.
+  * @param  void.
+  * @retval CHADLE_Status: Value indicating success or error code.
+  */
 CHADLE_Status CH_run_advertise_BLE(void){
   CHADLE_Status ret;
   ret= CH_set_advertise_BLE(AV_config,0,NULL,0,NULL);
   return ret;
 }
 
+/**
+  * @brief  This function is fire when a new devices event has been occured.
+  * @param  connection_t * connection: connection that will be associate to this new device
+  * @retval CHADLE_Status: Value indicating success or error code.
+  */
 
 CHADLE_Status CH_new_device_found_BLE(connection_t * connection, void * pr){
   uint8_t i;
@@ -348,7 +380,7 @@ CHADLE_Status CH_new_device_found_BLE(connection_t * connection, void * pr){
 
 
 /**
-  * @brief  This function management the node advertisement procedure called by the server.
+  * @brief  This function management the node advertisement procedure called by the central node.
   * @param  void * advertise_conf : user configuration (optional)
   * @param  uint8_t scanres_data_size :scan respounse datasize (default 0)
   * @param  void * scanres_data:scan respounse data (default NULL)
@@ -426,6 +458,13 @@ if (ret != BLE_STATUS_SUCCESS){
 }
 
 
+
+/**
+  * @brief  After a time_out this function could be used to cancel the current 
+  *         connection procedure before to start a reconnection.
+  * @param  void.
+  * @retval CHADLE_Status: Value indicating success or error code.
+  */
 CHADLE_Status CH_finish_the_connection_BLE(void)
 {
    tBleStatus ret;
@@ -440,15 +479,14 @@ if (ret != BLE_STATUS_SUCCESS){
   return CHADLE_SUCCESS;   
 }
 
-
-/*void connection_handler_broadcast(){
-}
-
-
+/**
+  * @brief  This function could be used to handler the connection in case of an error.  
+  *         
+  * @param  void.
+  * @retval CHADLE_Status: Value indicating success or error code.
+  */
 void connection_handler_error(void){
 	BSP_LED_Off(LED2);
 	while(1);
 }
-
-*/
 

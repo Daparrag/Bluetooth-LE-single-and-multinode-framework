@@ -27,11 +27,25 @@ static const uint8_t max_slots = EVENT_QUEUE_SIZE-1;
 static uint8_t HCI_Get_Event_Queue_Size_CB(void);
 /********************************************************/
 
+
+
+/**
+  * @brief  Used for indicate that there are pending events to process .
+  * @param void.
+  * @retval uint8_t: return 1 if there are pending events to process otherwhise 0
+  */
+  
 uint8_t HCI_new_Event_CB(void){
   if(list_length(event_queue)) return 1;
   return 0;
 }
 
+
+/**
+  * @brief  Used for initialized the event handler module.
+  * @param none.
+  * @retval none,
+  */
 
 void HCI_Init_Event_CB(void){
         start_slot = 0;
@@ -40,6 +54,12 @@ void HCI_Init_Event_CB(void){
 }
 
 
+
+/**
+  * @brief  This function return the number of pending events .
+  * @param none.
+  * @retval uint8_t: return  the number of pending events
+  */
 uint8_t HCI_Get_Event_Queue_Size_CB(void)
 {
   
@@ -47,12 +67,25 @@ uint8_t HCI_Get_Event_Queue_Size_CB(void)
 }
 
 
+/**
+  * @brief  This function retreve status of the queeue: empty, full, normal .
+  * @param none.
+  * @retval uint8_t: Status of the event queue. 
+  */
+
 uint8_t HCI_Get_Event_Queue_status_CB(void){
   
     if (list_length(event_queue) == EVENT_QUEUE_SIZE-1) return QUEUE_FULL;
     if (list_length(event_queue) == 0)return QUEUE_EMPTY;
     return QUEUE_NORMAL;
 }
+
+
+/**
+  * @brief return a free slot in the queeue for attach a new event.
+  * @param none.
+  * @retval uint8_t: slot index. 
+  */
 
 uint8_t HCI_Get_Entry_Index_CB(void)
 {
@@ -80,14 +113,25 @@ uint8_t HCI_Get_Entry_Index_CB(void)
   return start_slot;
 }
 
+
+/**
+  * @brief add and event in the index queue.
+  * @param struct event_entry * entry : event structure
+  * @retval none. 
+  */
+
 void HCI_add_Event_CB(struct event_entry * entry){
   
-  list_add (event_queue,entry );
+  list_add (event_queue, entry );
   start_slot+=1;
   
 }
 
-
+/**
+  * @brief retreve an event form the event queue.
+  * @param none
+  * @retval event_t *: Pointer to an event . 
+  */
 event_t * HCI_Get_Event_CB(void){
   struct event_entry * top_entry;
   event_t * event;
@@ -99,12 +143,21 @@ event_t * HCI_Get_Event_CB(void){
     
 }
 
+/**
+  * @brief Remove the las event processed.
+  * @param none
+  * @retval none . 
+  */
 void HCI_clean_last_Event_CB(void){
 list_pop (event_queue);
 }
 
-
-void HCI_Event_Handler_CB_(void *pckt){
+/**
+  * @brief event handler whitout queue.
+  * @param void *pckt: pointer to an input packet
+  * @retval none . 
+  */
+void HCI_Event_Handler_CB_(void *pckt){/*this version does not uses the event handler queue*/
   hci_uart_pckt *hci_pckt = pckt;
   hci_event_pckt * event_pckt = (hci_event_pckt*)hci_pckt->data;
   if(hci_pckt->type != HCI_EVENT_PKT)return;
@@ -179,8 +232,12 @@ void HCI_Event_Handler_CB_(void *pckt){
   }
 }
 
-
-void HCI_Event_Handler_CB(void *pckt){
+/**
+  * @brief event handler using queue.(does not works at the moment)
+  * @param void *pckt: pointer to an input packet
+  * @retval none . 
+  */
+void HCI_Event_Handler_CB(void *pckt){/*this is the version that uses the event queue (does not work)*/
 uint8_t index_queue;
   hci_uart_pckt *hci_pckt = pckt;
   hci_event_pckt * event_pckt = (hci_event_pckt*)hci_pckt->data;

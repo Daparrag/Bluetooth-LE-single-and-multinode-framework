@@ -23,28 +23,28 @@ network_t network;
 /*********************************************************/
 
 /*********************Static func************************/
-static void network_set_wait_end_procedure(void);
-static void network_clean_wait_end_procedure(void);
-static uint8_t network_get_wait_end_procedure(void);
-static NET_Status network_process_conn_oriented(event_t * event);
-static uint8_t validate_new_pherispheral_address(uint8_t *peer_address);
-static void init_device(void);
 
-static void init_service_handler(void);
+/************************ NETWORK HANDLER FUNCTIONS ********************/
+static void network_set_wait_end_procedure(void); /*fire when the network module has to wait for ending a process*/
+static void network_clean_wait_end_procedure(void);/*fire when the network module has finished a process*/
+static uint8_t network_get_wait_end_procedure(void);/*get the status of the network 1=wait for ending a process, 0=process finished */
+static NET_Status network_process_conn_oriented(event_t * event);/*handler the network as a connection oriented*/
+static uint8_t validate_new_pherispheral_address(uint8_t *peer_address);/*  Used to verify that this is efectivelly a new device*/
+static void init_device(void);/*initialized the device for an specific network type*/
+static void init_service_handler(void); /* Used to initialized the event handler states for an specific network type*/                 
+
+static void reset_profile_flags(app_profile_t * profile); /* Used to clean the status flags */
 
 
-static void reset_profile_flags(app_profile_t * profile);
+static connection_t * NET_Get_currentConnection_CB(void); /* retreave the current connection */
 
+static connection_t * NET_get_connection_by_address_BLE(uint8_t * addrss); /* retreave a connection characterized by and specific address */
 
-static connection_t * NET_Get_currentConnection_CB(void);
-static connection_t * NET_Connection_to_stablished_CB(void);
-static connection_t * NET_get_connection_by_address_BLE(uint8_t * addrss);
-static connection_t * NET_get_connection_to_service_Scan_BLE(void);
-static connection_t * NET_get_connection_to_char_Scan_BLE(void);
-static connection_t * NET_get_connection_by_status_CB(uint8_t _status);
-static connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler);
+static connection_t * NET_get_connection_by_status_CB(uint8_t _status);   /* retreave a connection characterized by and specific status */
 
-/*led static adverticements*/
+static connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler);    /* retreave a connection characterized by and specific connection handler */
+
+/************************ NETWORK  LED ADVERTISEMENT STATUS  FUNCTIONS ********************/
 
 static void NET_Control_led_status_BLE(void);
 static void connection_intermidle_toggle(void);
@@ -84,7 +84,7 @@ if(led_toggle_count++ > LED_TOGGLE_UNITIALIZED)
 }
 
 /**
-  * @brief  This function is used for indicate the connection_unestablished state.
+  * @brief  This function is used for indicate the connection status as interchange charactersitics and services state.
   * @param void.
   * @retval void.
   */
@@ -100,7 +100,7 @@ if(led_toggle_count++ > LED_TOGGLE_INTERCHANGE)
 
 
 /**
-  * @brief  This function is used for indicate the connection_unestablished state.
+  * @brief  This function is used for indicate the connection_ready to transmit data state.
   * @param void.
   * @retval void.
   */
@@ -115,27 +115,50 @@ if(led_toggle_count++ > LED_TOGGLE_READY)
 }
 
 
-
-
+/**
+  * @brief  This function set the network for wait until a process finish.
+  * @param void.
+  * @retval void.
+  */
 void network_set_wait_end_procedure(void ){
 
 	network.flags.wait_end_procedure=1;
 }
 
+/**
+  * @brief  This function is used for clean the network flag wait for an process to finish .
+  * @param void.
+  * @retval void.
+  */
 void network_clean_wait_end_procedure(void ){
 
 	network.flags.wait_end_procedure=0;
 }
 
-
+/**
+  * @brief  This function is used for retrieve the status of the network wait or not for and end process.
+  * @param void.
+  * @retval void.
+  */
  uint8_t network_get_wait_end_procedure(void ){
 
 	return network.flags.wait_end_procedure;
 }
 
 
-
-NET_Status init_network(net_type_t net_type, dv_type_t device_type,uint8_t num_reconnection, network_t ** net_output){
+/**
+  * @brief  This function Initialize the network module.
+  * @param net_type_t net_type: Network is connected or broadcast.
+  * @param dv_type_t device_type: Central, Perisperal,broadcaster,or observer.
+  * @param uint8_t num_reconnection: Number of times for retry a connection.
+  * @param network_t ** net_output: Pointer to the network configuration.
+  * @retval NET_Status: Value indicating success or error code
+  */
+NET_Status init_network(net_type_t net_type, 
+                        dv_type_t device_type,
+                        uint8_t num_reconnection, 
+                        network_t ** net_output)
+{
 
     network.flags.wait_end_procedure=0;
     network.flags.connection_stablishment_complete=0;
@@ -155,6 +178,11 @@ return NET_SUCCESS;
 }
 
 
+/**
+  * @brief  This function Initialize the device according to his role.
+  * @param  none
+  * @retval none
+  */
 void init_device(void){
 
     dv_state_t device_init_config; 
@@ -167,7 +195,7 @@ void init_device(void){
         
       }
       break;
-      case DEVICE_PHERISPHERAL:
+      case DEVICE_PERISPHERAL:
       {
         device_init_config = DEVICE_ADVERTISEMENT_MODE;
       }
@@ -192,7 +220,11 @@ network.device_cstatus = device_init_config;
 
 }
 
-
+/**
+  * @brief  Initialize the service handler status.
+  * @param  none
+  * @retval none
+  */
 void init_service_handler(void){
 	#ifdef MULTINODE
 		uint8_t i;
@@ -215,6 +247,12 @@ void init_connection_handler(void){
 }
 
 
+
+/**
+  * @brief  handler the network according to the role of the device and the type of event.
+  * @param  event_t * event: specific event
+  * @retval none
+  */
 NET_Status network_process(event_t * event){
 NET_Status ret;
 	switch(device_role){
@@ -225,7 +263,7 @@ NET_Status ret;
 		}
 		break;
 
-		case DEVICE_PHERISPHERAL:
+		case DEVICE_PERISPHERAL:
 		{
 			ret = network_process_conn_oriented(event);
 		}
@@ -240,7 +278,11 @@ return ret;
 }
 
 
-
+/**
+  * @brief  advertise the device status .
+  * @param  none
+  * @retval none
+  */
 void NET_Control_led_status_BLE(void){
   switch(network.device_cstatus)
   {
@@ -270,7 +312,11 @@ void NET_Control_led_status_BLE(void){
   
 }
 
-
+/**
+  * @brief  handler a central - multiperispheral nodes connection .
+  * @param  event_t * event: specific event
+  * @retval NET_Status: Value indicating success or error code
+  */
 NET_Status network_process_conn_oriented(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
 
 CHADLE_Status ch_ret;
@@ -356,7 +402,7 @@ connection_t * connection;
 		
 			case DEVICE_ADVERTISEMENT_MODE:
 			{
-				if(device_role!=DEVICE_PHERISPHERAL){
+				if(device_role!=DEVICE_PERISPHERAL){
 					PRINTDEBUG("the devices is not correct initialized please check the network initialization\n");
 					return NET_ERROR;
 				}
@@ -391,7 +437,7 @@ connection_t * connection;
 					}
 				}else if(network_get_wait_end_procedure()==0)
 				{
-					if(ADVERTICEMENT_MODE == GENERAL_ADVERTICEMENT) ch_ret=CH_run_advertise_BLE(); 
+					if(ADVERTISEMENT_MODE == GENERAL_ADVERTISEMENT) ch_ret=CH_run_advertise_BLE(); 
 				
 					if(ch_ret!=CHADLE_SUCCESS)
 					{
@@ -639,7 +685,11 @@ return NET_SUCCESS;
 }
 
 
-
+/**
+  * @brief  resent the control flags for initialize a new service-attribute scanning .
+  * @param  app_profile_t * profile: profile to clean
+  * @retval none
+  */
 void reset_profile_flags(app_profile_t * profile){
   uint8_t i;
   app_service_t * service;
@@ -660,7 +710,11 @@ void reset_profile_flags(app_profile_t * profile){
   }  
 }
 
-
+/**
+  * @brief  retreive one connection in status ST_UNESTABLISHED 
+  * @param  none
+  * @retval connection_t *: Pointer to the retrieved connection. 
+  */
 
 connection_t * NET_Get_currentConnection_CB(void){
 	connection_t * connection = NULL;
@@ -678,27 +732,11 @@ connection_t * NET_Get_currentConnection_CB(void){
 }
 
 
-connection_t *  NET_Connection_to_stablished_CB(void){
-	connection_t * connection = NULL;
-	#ifdef MULTINODE
-	uint8_t i;
-	for (i=0; i < network.num_device_found; i++ ){
-		uint8_t connection_status =  network.mMSConnection[i].connection_status;
-		if(connection_status==ST_CREATE_CONNECTION)
-		{
-			connection = &network.mMSConnection[i]; 
-			break;
-		}
-	}
-	#else
-		uint8_t connection_status =  network.mMSConnection.connection_status;
-		if(connection_status==ST_CREATE_CONNECTION)connection = &network.mMSConnection;
-
-	#endif	
-
- return connection;	
-}
-
+/**
+  * @brief  retrieve one connection in status a specific status 
+  * @param  uint8_t _status: status of the connection to retrieve
+  * @retval connection_t *: Pointer to the retrieved connection. 
+  */
 connection_t * NET_get_connection_by_status_CB(uint8_t _status){
 	connection_t * connection = NULL;
 	#ifdef MULTINODE
@@ -718,6 +756,12 @@ return 	connection;
 }
 
 
+/**
+  * @brief  define a specific profile for a list of connections
+  * @param  app_profile_t * profile_def: Profile to define
+  * @param   uint8_t * list_index: list of connections
+  * @retval NET_Status: success or error code. 
+  */
 /*setup a profile for an specific connection*/
 NET_Status net_setup_profile_definition(app_profile_t * profile_def, 
 					uint8_t * list_index, 
@@ -740,12 +784,7 @@ if(list_index_size-1 >= EXPECTED_NODES || list_index== NULL){
 
 for(i=0; i < list_index_size; i++){
 	index = *list_index++;
-        //app_service_t ** pt = &network.mMSConnection[index].Node_profile->services;
-	//memcpy(network.mMSConnection[index].Node_profile,profile_def,sizeof(app_profile_t));
-        //network.mMSConnection[index].Node_profile->n_service=profile_def->n_service;
-        //pt = &((*profile_def).services);
-        //memcpy((void*)&network.mMSConnection[index].Node_profile->svflags,(void*)&profile_def->svflags,sizeof(sv_ctrl_flags));
-	network.mMSConnection[index].Node_profile=profile_def;
+        network.mMSConnection[index].Node_profile=profile_def;
 
 	if(network.mMSConnection[index].Node_profile==NULL){
 		/*something is wrong*/
@@ -769,6 +808,13 @@ return NET_SUCCESS;
 }
 
 
+/**
+  * @brief  define a specific connection configuration  for a list of connections
+  * @param  config_connection_t * config: connection to configure
+  * @param   uint8_t * list_index: list of connections
+  * @retval NET_Status: sucess or error code. 
+  */
+/*setup a connection configuration for an specific list of connection*/
 NET_Status net_setup_connection_config(config_connection_t * config, 
 					uint8_t * list_index, 
                                         size_t list_index_size){
@@ -817,7 +863,11 @@ if(list_index_size >= EXPECTED_NODES || list_index== NULL){
 return NET_SUCCESS;
 }
 
-
+/**
+  * @brief  check if it is a valid perispheral address
+  * @param  uint8_t *peer_address: pointer to the peer address
+  * @retval uint8_t: address_valid=1,address_not_valid=0. 
+  */
 
 uint8_t validate_new_pherispheral_address(uint8_t *peer_address){
 	
@@ -844,7 +894,11 @@ uint8_t validate_new_pherispheral_address(uint8_t *peer_address){
 return address_valid;
 }
 
-
+/**
+  * @brief  retreve a connection by address
+  * @param  uint8_t *peer_address: connection address to retrieve
+  * @retval connection_t *: pointer to the valid address connection . 
+  */
 connection_t * NET_get_connection_by_address_BLE(uint8_t * peer_address){
 
 
@@ -891,6 +945,12 @@ connection_t * NET_get_connection_by_address_BLE(uint8_t * peer_address){
 return NULL;
 
 }
+
+/**
+  * @brief  retreve a connection by connection handler
+  * @param  uint16_t chandler: connection handler to search
+  * @retval connection_t *: pointer to the valid connnection handler connection . 
+  */
 
 connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler)
 {

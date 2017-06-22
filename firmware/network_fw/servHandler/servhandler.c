@@ -15,101 +15,6 @@
 /*************************services_handler_config***********************/
 servhandler_conf servhandler_config = {DISC_SERVICE,DISC_CHAR}; /*this is the default configuration of the service handler module*/
 /**************************static functions******************************/
-void service_handler();
-//static void set_char_flags(connection_t * connection);
-static void service_error_handler(void);
-static SERV_Status discovery_services(void);
-//static SERV_Status DSCV_char_by_uuid(connection_t * connection);/*primitive used for discover characteristics characterized by a specific uuid*/
-/***********************************************************************/
-
-/**
-  * @brief  This function is called to retrieve the service handler configuration.
-  * @param void *config: destination structure.
-  * @retval void
-  */
-void get_sv_handler_config(void *config){
-  servhandler_conf * temp_serv_config =(servhandler_conf *)config;
-  
-  temp_serv_config->serv_disc_mode = servhandler_config.serv_disc_mode;
-  temp_serv_config->char_disc_mode =  servhandler_config.char_disc_mode;
-}
-
-/**
-  * @brief  This function is called for set up the service handler configuration.
-  * @param void * config: configuration structure.
-  * @retval void: Value indicating success or error code.
-  */
-void set_sv_handler_config(void * config){
-  
-  servhandler_conf * user_config =(servhandler_conf *)config;
-  
-	servhandler_config.serv_disc_mode=user_config->serv_disc_mode;
-	servhandler_config.char_disc_mode=user_config->char_disc_mode;
-} 
-
-
-/*connection inclide the profile services and  characteristics */
-/*This wil recursively scan for all the services and attributes in the profile structure
-* the user could overwrite this function acording to what it is needed.
-*/
-
-/**
-  * @brief  This function describe the services handler behavior you can overwirte this function according to your application requiorements.
-  * @param connection_t * connection: this is the connection structure which contain the services for a specific virtual link througth
-  *									  one master node and one slave node.
-  *
-  * @param net * flags:	event handler flags, for effective control of the service_handler module.  
-  * @retval none
-  */
-void service_handler(connection_t * connection, net_flags * flags){
-SERV_Status ret;
-/*input verification*/
-if(connection==NULL || flags==NULL){
-	PRINTF("some of the imput parameters on the connection handler is NULL  please verify\n");
-	service_error_handler();
-}
-//uint8_t services_to_find = connection->Node_profile.n_service;
-
-/*profile discovery fsm */
-	switch(connection->connection_status){
-		case ST_STABLISHED:/*we have to modified*/
-		{
-			switch(connection->service_status){
-				case ST_SERVICE_DISCOVERY:
-				{
-					if(!(flags->wait_end_procedure)){
-						/*discover the remote services.*/
-						if(servhandler_config.serv_disc_mode==FIND_SPE_SERVICE) ret= DSCV_primary_services_by_uuid(connection);
-						if(servhandler_config.serv_disc_mode==FIND_GEN_SERVICE) ret=SERV_SUCCESS;/*not yet implemented*/
-						if(servhandler_config.serv_disc_mode==DONT_FIND_SERVICE) ret=SERV_SUCCESS;/*not yet implemented*/
-
-						if( ret != SERV_SUCCESS) service_error_handler();
-						flags->wait_end_procedure=1;
-					}
-
-
-					/*once all the services had been discovered the connection status change to characteristic discovery*/
-				}
-				break;
-				case ST_CHAR_DISCOVERY:
-				{
-					if(flags->wait_end_procedure){
-						/* discover the remote characteristics.*/
-						//if(servhandler_config.char_disc_mode==FIND_SPE_CHAR)DSCV_char_by_uuid(connection);
-						flags->wait_end_procedure=1;
-
-					}
-
-					/*once all characteristics have been discovered the connection status change to connected*/
-
-				}
-				break;
-			}
-		}
-		break;
-	}
-
-}
 
 /**
 * @brief  This function is called for discovery a service characterized by an uuid.
@@ -173,16 +78,12 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
 {
     tBleStatus ret;
     uint8_t i;
-    uint8_t num_services;
     uint8_t num_char;
     app_attr_t * charac;
     app_service_t * service;
     char_flags * attr_control_flags;
     
-    /*let get the total number of services*/
-    num_services = connection->Node_profile->n_service;
-    
-    /*lets get the correct service*/
+      /*lets get the correct service*/
     service = connection->Node_profile->services;
     while(service!=NULL && service->chrflags.char_discovery_success!=0){
       service = service->next_service;
@@ -237,16 +138,6 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
   /*a characteristic have been discovered*/ 
   return  SERV_SUCCESS;
     
-}
-
-
-/**
-* @brief  This function is called for discovery a services without know their uuid.
-* @param  connection_t * connection: contain specific characteristics and services for this connection.
-* @retval SERV_Status: SERV_SUCCESS if operation is success otherwise SERV_ERROR.
-*/
-SERV_Status discovery_services(void){
-	return  SERV_SUCCESS;
 }
 
 /**
