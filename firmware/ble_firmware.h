@@ -217,7 +217,8 @@ ST_OBSERVER,						/*!< handler the communication as observer node >*/
 ST_BROADCAST, 						/*!< handler the communication as broadcast node >*/
 ST_CONNECTED_WAIT_DISC,		/*!< ?¿ >*/
 ST_CREATE_CONNECTION,  
-ST_TIME_OUT  						/*!< the connection exceed the time for stablishement >*/	
+ST_TIME_OUT,  						/*!< the connection exceed the time for stablishement >*/
+ST_CONNECTION_LOST                                      /*!< connection lost or impossible to setup >*/
 }cn_state_t;
 
 typedef struct{/*structure for connection configuration*/
@@ -252,7 +253,7 @@ typedef enum{
 
 typedef struct{ /*single connection structure*/
 uint16_t Connection_Handle;           /*!< define one and only one connection handler x slave  */
-/*NOTE: i guess that this can be part of service datastructure */app_profile_t * Node_profile;  /*!< could be one profile x slave (most convenient)*/
+app_profile_t * Node_profile;         /*!< could be one profile x slave (most convenient)*/
 uint8_t device_type_addrs;            /*!< slave device addrs type*/
 uint8_t device_address[6];            /*!< device address val*/
 config_connection_t * cconfig;        /*!< device has a special connection configuration(optional) >*/
@@ -279,6 +280,7 @@ typedef struct
   uint8_t num_device_connected;        /*<! this indicates the number of pherispheral success added to the network in a multinode mode>*/
   uint8_t num_device_serv_discovery;    /*<! this indicates the number of per devices that had successfully scanned their services_characteristic>*/
   dv_state_t device_cstatus;            /*!< status of the device in this network*/
+  struct timer time_alive;                /*!< time remaining before to consider the connection  or devices undiscoverable lost*/
   #ifdef MULTINODE
   connection_t mMSConnection[EXPECTED_NODES]; /*<! here one connection per node mangement by the application >*/
   #else

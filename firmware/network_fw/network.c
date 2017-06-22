@@ -16,6 +16,7 @@
 net_type_t    net_mode =  NET_CONNECTED;/*the default connection mode*/
 dv_type_t     device_role = DEVICE_CENTRAL; /*by default the devices will be cental*/
 net_status_t  net_status = NET_NOT_INITIALIZED;
+uint8_t reconnection_tries;
 static uint32_t led_toggle_count = 0;
 
 network_t network;
@@ -134,11 +135,13 @@ void network_clean_wait_end_procedure(void ){
 
 
 
-NET_Status init_network(net_type_t net_type, dv_type_t device_type ,network_t ** net_output){
+NET_Status init_network(net_type_t net_type, dv_type_t device_type,uint8_t num_reconnection, network_t ** net_output){
 
-	network.flags.wait_end_procedure=0;
+    network.flags.wait_end_procedure=0;
     network.flags.connection_stablishment_complete=0;
     network.flags.services_discovery_complete=0;
+    
+    
 	net_mode = net_type;
 	device_role = device_type;
 	network.num_device_found=0;
@@ -147,7 +150,8 @@ NET_Status init_network(net_type_t net_type, dv_type_t device_type ,network_t **
 	init_service_handler();
 	net_status = NET_INITALIZED;
 	*net_output=&network;
-	return NET_SUCCESS;
+        reconnection_tries = num_reconnection;
+return NET_SUCCESS;
 }
 
 
@@ -335,9 +339,18 @@ connection_t * connection;
 						PRINTDEBUG(" An Error occur during general-discovery-setup please check the configuration parameters\n");
 						return NET_ERROR;
 					}
-					
+                                        
+					Timer_Set(&network.time_alive, CLOCK_SECOND * 36);
 					network_set_wait_end_procedure();
-				}
+				}else if(network_get_wait_end_procedure()==1)
+                                {
+                                  if(Timer_Expired(&network.time_alive)){
+                                    PRINTDEBUG("The devices was not able to identify %d perispherals:\n",(EXPECTED_NODES - network.num_device_found));
+                                    PRINTDEBUG("the device will try to set up a connection with %d pherispherals\n",network.num_device_found);
+                                      network.device_cstatus=DEVICE_READY_TO_CONNECT;
+                                      network_clean_wait_end_procedure();
+                                  }
+                                }
 			}
 			break;
 		
@@ -405,6 +418,12 @@ connection_t * connection;
 						evt_le_connection_complete *cc =  (void*) event->evt_data;
 					
 						connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
+                                                if(connection==NULL) 
+                                                {
+                                                  /*this is not and interesting address for us since this device has not part of the network*/
+                                                  //network_clean_wait_end_procedure();
+                                                  return NET_SUCCESS;
+                                                } 
 						ch_ret = CH_Connection_Complete_BLE(connection,cc->handle,cc->peer_bdaddr);
 					
 						if(ch_ret!=CHADLE_SUCCESS)
@@ -429,16 +448,80 @@ connection_t * connection;
 			}else if(network_get_wait_end_procedure()==0)
 			{
 				connection=NET_get_connection_by_status_CB(ST_CREATE_CONNECTION);
-				ch_ret = CH_run_create_connection_BLE(connection);
+                                if(connection==NULL)
+                                {
+                                  /*that means that the coonection state has been completed*/
+                                  if(network.num_device_connected <= 0 && reconnection_tries > 0)
+                                  {
+                                    PRINTDEBUG(" Was imposible to connect with any device \n");
+                                    PRINTDEBUG(" Now the device will start the reconnection procedure \n");
+                                    
+                                  }else if(network.num_device_connected < network.num_device_found && reconnection_tries > 0)
+                                  {
+                                    PRINTDEBUG(" Was imposible to connect with %d devices \n", (network.num_device_found - network.num_device_connected));
+                                    PRINTDEBUG(" Now the device will start the reconnection procedure \n");
+                                  }else if(network.num_device_connected == network.num_device_found)
+                                  {
+                                    /*something was wrong at this point, this is an impossible state*/
+                                     return NET_ERROR;
+                                  }
+                                  
+                                  /*device is trying to reconnect*/
+                                  {
+                                   
+                                    if(reconnection_tries<=0)
+                                    {
+                                      /*check it that there is at least one perispheral connected*/
+                                      if(network.num_device_connected > 0)
+                                      {
+                                        network.device_cstatus = DEVICE_READY_TO_INTERCHANGE;
+                                        
+                                        do{
+                                          connection = NET_get_connection_by_status_CB(ST_TIME_OUT);
+                                          if(connection!=NULL) connection->connection_status = ST_CONNECTION_LOST;   
+                                        }while(connection!=NULL);
+                                        PRINTDEBUG(" Was imposible to connect with %d devices \n", (network.num_device_found - network.num_device_connected));
+                                        PRINTDEBUG(" Now the device will start the service_discovery_procedure \n");
+                                        network.flags.connection_stablishment_complete=1;
+                                        return NET_SUCCESS;
+                                      }
+                                      PRINTDEBUG(" Was imposible to connect with any device \n");
+                                      return NET_ERROR;
+                                    }
+                                    
+                                    connection=NET_get_connection_by_status_CB(ST_TIME_OUT);
+                                    
+                                    if(connection==NULL)return NET_ERROR; /*something was wrong*/
+                                     reconnection_tries-=1;
+                                    
+                                 }
+                                  
+                              }
+				if(CONNECTION_MODE == GENERAL_CONNECTION) ch_ret = CH_run_create_connection_BLE(connection);/*improviment point*/
 			
 				if(ch_ret!=CHADLE_SUCCESS)
 				{
 					PRINTDEBUG(" An Error occur during CH_run_create_connection_BLE procedure please check the parameters\n");
 					return NET_ERROR;
 				}
-		
+                                
+                                Timer_Set(&network.time_alive, CLOCK_SECOND * 60);
 				network_set_wait_end_procedure();
-			}
+                                
+			}else if(network_get_wait_end_procedure()==1)
+                        {
+                          if(Timer_Expired(&network.time_alive)){
+                              if(CONNECTION_MODE == GENERAL_CONNECTION) ch_ret = CH_finish_the_connection_BLE();
+                              if(ch_ret!=CHADLE_SUCCESS)
+                              {
+                                PRINTDEBUG(" An Error occur clossing the connection please verify\n");
+                                return NET_ERROR;
+                              }
+                              connection=NET_get_connection_by_status_CB(ST_CREATE_CONNECTION);
+                              if(connection!=NULL) connection->connection_status = ST_TIME_OUT;
+                              network_clean_wait_end_procedure();     
+                          }
+                        }
 		
 		}
 		break;

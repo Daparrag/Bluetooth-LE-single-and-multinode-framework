@@ -25,7 +25,7 @@ typedef enum{
 
 
 
-NET_Status init_network(net_type_t net_type, dv_type_t device_type ,network_t ** net_output);/*initialized the network module*/
+NET_Status init_network(net_type_t net_type, dv_type_t device_type ,uint8_t N_reconnections, network_t ** net_output);/*initialized the network module*/
 
 NET_Status network_process(event_t * event);/*main network function: running the connection handler and the services handler */
 

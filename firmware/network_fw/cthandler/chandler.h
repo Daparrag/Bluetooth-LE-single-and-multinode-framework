@@ -112,6 +112,8 @@ CHADLE_Status CH_run_selective_discovery_BLE(void);
 
 CHADLE_Status CH_run_create_connection_BLE(connection_t * connection);
 
+CHADLE_Status CH_finish_the_connection_BLE(void);
+
 CHADLE_Status CH_new_device_found_BLE(connection_t * connection, void * pr);
 
 /*control flag function */

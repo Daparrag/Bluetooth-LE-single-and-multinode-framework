@@ -426,6 +426,19 @@ if (ret != BLE_STATUS_SUCCESS){
 }
 
 
+CHADLE_Status CH_finish_the_connection_BLE(void)
+{
+   tBleStatus ret;
+   
+   if(CONNECTION_MODE==GENERAL_CONNECTION)ret = aci_gap_terminate_gap_procedure(0x40);
+   
+   
+if (ret != BLE_STATUS_SUCCESS){
+    return CHADLE_ERROR;
+  }
+
+  return CHADLE_SUCCESS;   
+}
 
 
 /*void connection_handler_broadcast(){
