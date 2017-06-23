@@ -11,8 +11,17 @@
 #define MULTINODE							/*!< Used only if your device support multinode connections and if it is requiered for your application >*/
 
 
+#ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
+#define EXPECTED_NODES 3
+#define EXPECTED_CENTRAL_NODES 1					
+#else
+#define EXPECTED_NODES 1
+#define EXPECTED_CENTRAL_NODES 1 
+#endif
+
+
 /*address setup defaut parameters*/
-#define DEVICE_ADDRS_LENGTH 			(6)		/*!< Modified according to the peer device address size (bytes)>*/
+#define DEVICE_ADDRS_LENGTH 		        (6)		/*!< Modified according to the peer device address size (bytes)>*/
 #define CONFIG_DATA_PUBADDR_OFFSET	 (0x00) 	/**< Bluetooth public address or random*/
 #define CONFIG_DATA_PUBADDR_LEN		    (6)		/*!< Public address size (bytes) >*/		
 

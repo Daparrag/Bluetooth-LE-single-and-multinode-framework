@@ -32,17 +32,11 @@
 #endif
 
 
-#ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
-#define EXPECTED_NODES 3
-#define EXPECTED_CENTRAL_NODES 2					
-#else
-#define EXPECTED_NODES 1
-#define EXPECTED_CENTRAL_NODES 1 
-#endif
 
 #ifndef DEVICE_ADDRS_LENGTH
-#define DEVICE_ADDRS_LENGTH 6
+#define DEVICE_ADDRS_LENGTH     (6)
 #endif
+
 //#define MAX_SERVER_ATT_SIZE             0x03
 
 
@@ -284,6 +278,7 @@ typedef struct
 
 /*****************************EVENT HANDLER STRUCTURES**********************************************/
 typedef struct { /*this is the structured used by the event handler for specified an event*/
+  tClockTime ISR_timestamp;
   uint16_t event_type;
   void * evt_data;
 }event_t;

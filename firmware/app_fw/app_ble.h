@@ -49,36 +49,6 @@
 
 
 
-/*advertise default configuration*/
-#ifndef ADV_EVT_TYPE
-#define ADV_EVT_TYPE  ADV_IND               /*<!  advertisement event type  >*/
-#endif
-
-#ifndef ADV_IT_MIN
-#define ADV_IT_MIN    (0x00)                /*<!  advertisement interval min  >*/
-#endif
-
-#ifndef ADV_IT_MAX
-#define ADV_IT_MAX    (0x00)                /*<!  advertisement interval max  >*/  
-#endif
-
-#ifndef ADV_ADDR_TYPE
-#define ADV_ADDR_TYPE PUBLIC_ADDR           /*<!  advertisement address type  >*/        
-#endif
-
-#ifndef ADV_POLICY
-#define ADV_POLICY  NO_WHITE_LIST_USE       /*<!  advertisement policy  >*/
-#endif
-
-#ifndef SLAVE_INT_MIN
-#define SLAVE_INT_MIN   (0x00)            /*<!  slave connection interval min  >*/
-#endif
-
-#ifndef SLAVE_INT_MAX
-#define SLAVE_INT_MAX   (0x00)            /*<!  slave connection interval max  >*/
-#endif
-
-
 
 /*device address parameters*/
 /*address setup defaut parameters*/
@@ -87,7 +57,7 @@
 #endif
 
 #ifndef CONFIG_DATA_PUBADDR_OFFSET
-#define CONFIG_DATA_PUBADDR_LEN		   (6)
+#define CONFIG_DATA_PUBADDR_LEN		   (6)	/**< Bluetooth public address size (bytes)*/
 #endif
 
 
@@ -104,56 +74,19 @@
 #endif
 
 
-/*could be removed since the network has to be independent of the node*/
-typedef struct{                     /*central node type structure*/
-  network_t net;
-  dv_state_t central_status;
-}central_node_t;
-
-
-typedef struct{                    /* simple pherisperal node type structure*/
-  dv_state_t pherispheral_status;
-}spherispheral_node_t;
-
-typedef central_node_t broadcast_node_t; /*broadcast node type structure*/
-typedef spherispheral_node_t observer_node_t;  /*observer node type structure*/
-typedef central_node_t cpherispheral_node_t; /*complex pherispheral node*/
-
-
 /**
 * global_func_declaration
 */
 APP_Status APP_Init_BLE(void); /*init the BLE_arch*/
-APP_Status APP_init_BLE_Profile(app_profile_t * profile);/*init the BLE app*/
+APP_Status APP_init_BLE_Profile(app_profile_t * profile);/*init the BLE profile */
 APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service);/*add BLE services*/
 APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr);/*add BLE attribute*/
-//APP_Status APP_set_discovery_BLE(void * dicovery_config);/*this is used for receive advertisements called by clients*/
-//APP_Status APP_set_advertise_BLE(void * advertise_conf, 
-//                                uint8_t scanres_data_size,
-//                                void * scanres_data,
-//                                uint8_t serviceuuidlength, 
-//                                void * serviceuuidlist);/*server generate advertisements to clients*/
-//APP_Status APP_create_connection_BLE(void *connect_config, 
-//                                    uint8_t peer_addrtype, 
-//                                    void * peer_addrs);/*used by setup connection by the master node*/
-
-
-void * APP_get_service_BLE(app_profile_t * profile, void * service);
-
-void * APP_get_attribute_BLE(app_service_t * service, void *attr);
-
-
-void APP_get_default_config_BLE(void *app_discovery,void * app_connection,void * app_advertise); /*used for retrieve the default config*/
-
-
+void * APP_get_service_BLE(app_profile_t * profile, void * service);/*return each one of the services (one at time) associated to a profile*/
+void * APP_get_attribute_BLE(app_service_t * service, void *attr);/*return each one of the attributes (one at time) associated to a service*/
 void * APP_get_direct_addrs_BLE(int * size);/* used for retreive the addrs of the BLE device*/
-
 void * APP_get_direct_name_BLE(int * size); /*used for retrieve the name of the BLE device*/
-
-uint8_t get_harware_version(void); /*return the harware version*/
-
+uint8_t get_harware_version(void); /*return the harware version IDB0xA1*/
 const char * get_local_name (void);/*return pointer to the local name*/
-
 uint8_t  get_local_name_size (void);/*return the size of the local name*/
 
 #endif /* PTP_BLE_H */
