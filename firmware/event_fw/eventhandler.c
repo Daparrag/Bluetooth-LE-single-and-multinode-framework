@@ -301,5 +301,160 @@ uint8_t index_queue;
 
 
 
+void HCI_Isr_Event_Handler_CB(){
+  /*Here had been modified the HCI_Isr method to allows:
+  *
+  *1. timestamp for all imput packages.
+  *2. allocate the input packets into the packet queue with priorities.
+  *
+  */
+
+  tHciDataPacket * hciReadPacket = NULL;
+  uint8_t data_len;
+  tClockTime HCI_Isr_time = Clock_Time(); /*this is the current time in which the packet was transfered from the PoolQueue to the ReadRXqueue*/
+  Clear_SPI_EXTI_Flag();
+
+   while(BlueNRG_DataPresent()){ 
+      if(list_is_empty (&hciReadPktPool) == FALSE){
+
+         /* enqueueing a packet for read */
+        list_remove_head (&hciReadPktPool, (tListNode **)&hciReadPacket);
+        data_len = BlueNRG_SPI_Read_All(hciReadPacket->dataBuff, HCI_READ_PACKET_SIZE);
+        if(data_len > 0){
+          hciReadPacket->
+          hciReadPacket->data_len = data_len;
+          if(HCI_verify(hciReadPacket) == 0){
+            hciReadPacket->Isr_timestamp = HCI_Isr_time;
+
+            if(Packet_Get_Priority(hciReadPacket)!=0){
+                /*insert packet according to the priority level */
+
+            }else{
+              /*if not priority insert in the tail*/
+              list_insert_tail(&hciReadPktRxQueue,(tListNode *)hciReadPacket);
+            }
 
 
+          }else{
+              /*this is a wrong packet(it is not an event_packet)*/
+              /* Insert the packet back into the pool.*/
+              list_insert_head(&hciReadPktPool, (tListNode *)hciReadPacket);
+          }
+
+        }else{
+          /*this is a wrong packet (packet without length)*/
+           /* Insert the packet back into the pool.*/
+              list_insert_head(&hciReadPktPool, (tListNode *)hciReadPacket);
+        }
+   }else{
+      // HCI Read Packet Pool is empty, wait for a free packet.
+      Clear_SPI_EXTI_Flag();
+      return;
+   }
+
+  Clear_SPI_EXTI_Flag();
+  }
+}
+
+
+
+void HCI_Packet_Release_Event_Handler_CB(){
+  tHciDataPacket * hciReadPacket = NULL;
+
+Disable_SPI_IRQ();
+   uint8_t list_empty = list_is_empty(&hciReadPktRxQueue);  
+ 
+    if(list_empty == FALSE){    
+      list_remove_head (&hciReadPktRxQueue, (tListNode **)&hciReadPacket);
+      list_insert_tail(&hciReadPktPool, (tListNode *)hciReadPacket);    
+    }else{
+       /* Explicit call to HCI_Isr(), since it cannot be called by ISR if IRQ is kept high by
+      BlueNRG. */    
+      HCI_Isr();
+    }
+
+Enable_SPI_IRQ();    
+
+}
+
+
+void * HCI_Get_Event_Event_Handler_CB(){
+
+   tHciDataPacket * hciReadPacket = NULL;
+   Disable_SPI_IRQ();
+    uint8_t list_empty = list_is_empty(&hciReadPktRxQueue);
+    if(list_empty==FALSE){
+
+
+      list_get_head (&hciReadPktRxQueue, (tListNode **)&hciReadPacket);/**/
+      Enable_SPI_IRQ();
+      hci_uart_pckt *hci_pckt = (hciReadPacket->dataBuff);
+      hci_event_pckt * event_pckt = (hci_event_pckt*)(hci_pckt->dataBuff);
+       
+       if(hci_pckt->type != HCI_EVENT_PKT){
+        /*BLUENRG only support event_packets*/
+        return NULL;
+        }
+
+        switch(event_pckt->evt){
+
+          case EVT_DISCONN_COMPLETE:
+          {
+                  /*stil is not defined*/
+                  while(1);
+      
+          }
+          break;
+
+            case EVT_LE_META_EVENT:
+            {
+
+              evt_le_meta_event *evt = (void *)event_pckt->data;
+              switch(evt->subevent){
+                  case EVT_LE_CONN_COMPLETE:
+                  {
+                    evt_le_connection_complete *cc = (void *)evt->data;
+                    _event.event_type = EVT_LE_CONN_COMPLETE;
+                    _event.evt_data =cc;
+                    _event.ISR_timestamp = hciReadPacket->Isr_timestamp;
+                    return (void*)&_event;
+                  }
+                  break;
+                  case EVT_LE_ADVERTISING_REPORT:
+                  {
+                    le_advertising_info *pr = (le_advertising_info*) (((uint8_t*)evt->data)+1);
+                    _event.event_type = EVT_LE_ADVERTISING_REPORT;
+                    _event.evt_data = pr;
+                    _event.ISR_timestamp = hciReadPacket->Isr_timestamp;
+                    return (void*)&_event;
+                  }
+                  break;
+
+
+              }
+
+            }
+            break;
+            case EVT_VENDOR:
+            {
+              evt_blue_aci * blue_evt = (void*)event_pckt->data;
+              switch(blue_evt->ecode)
+              {
+
+                case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
+                {
+                  evt_gatt_procedure_complete * pr = (void*)blue_evt->data;
+                  _event.event_type=EVT_BLUE_GATT_PROCEDURE_COMPLETE;
+                  _event.evt_data = pr;
+                  _event.ISR_timestamp = hciReadPacket->Isr_timestamp;
+                }
+                break;
+              }
+            }
+            break;
+        }
+    }else{
+      Enable_SPI_IRQ();
+    }
+
+}

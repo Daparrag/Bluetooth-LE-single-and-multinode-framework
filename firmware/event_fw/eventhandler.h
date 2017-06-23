@@ -24,6 +24,19 @@
 #define QUEUE_EMPTY     0x0			/*for enhance propouse*/
 #define QUEUE_NORMAL    0x2			/*for enhance propouse*/
 
+/*we could overwrite this structure to include some advanced charactersitics */
+typedef struct _tHciDataPacket
+{
+  tClockTime Isr_timestamp; /*received package timestamp*/	
+  tListNode currentNode;
+  uint8_t dataBuff[HCI_READ_PACKET_SIZE];
+  uint8_t data_len;
+} tHciDataPacket;
+
+
+
+
+
 struct event_entry{					/*for enhance propouse*/
 	struct event_entry * next;
 	event_t event_val;

@@ -43,13 +43,7 @@
 
 
 #define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#define PRINTDEBUG(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#define PRINTDEBUG(...)
+#include <debug.h>
 #endif
 
 
@@ -83,6 +77,7 @@ void Clock_Init(void)
 {
   // FIXME: as long as Cube HAL is initialized this is OK
   // Cube HAL default is one clock each 1 ms
+  // here it is necessary to setup and interrupt of 1 ms clock and call clock tick function.
 }
 
 /**
@@ -92,6 +87,9 @@ void Clock_Init(void)
  */
 tClockTime Clock_Time(void)
 {
+  /*Disable the interruption */
+  /*Read the current clock*/
+  /*Enable The interruption again*/
 	
   PRINTF("Current Clock: %d ticks and %d seconds \n", current_clock, current_seconds);
   return current_clock;
