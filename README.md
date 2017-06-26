@@ -13,11 +13,11 @@ This  is a firmware  which contain a collection of low level modules used to gua
 
 My interest in this project was focused principally in allows synchonous multimedia transmittions in BLE 4.1 this repository only contain the basic firmware needed to implement this idea. 
 
-In another repository I will post the solution using this firmware. 
+In another repository I will post the solution for synchonous BLE using this firmware. 
 
 
 
-In the image you could see a simple example (**one node as a central an two as pherispheral**) after to connection and services & charateristics exchanged, using this firmware. 
+In the image you could see a simple example (**one node as a central an two as pherispheral**) after to be connected and after to exchange their services & charateristics. Using this firmware. 
 
 <img src="https://github.com/Daparrag/Lib/blob/master/firmware/screenshots/connection_complete.gif" alt="connection complete" width="600px" />
 
