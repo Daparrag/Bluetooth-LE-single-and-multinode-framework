@@ -253,7 +253,12 @@ void init_connection_handler(void){
   * @param  event_t * event: specific event
   * @retval none
   */
-NET_Status network_process(event_t * event){
+NET_Status network_process(/*event_t * event*/){
+  if(network.device_cstatus==DEVICE_READY){
+  NET_Control_led_status_BLE();
+  return NET_SUCCESS;
+  }
+event_t * event = (event_t *)HCI_Get_Event_CB();
 NET_Status ret;
 	switch(device_role){
 		case DEVICE_CENTRAL:
@@ -346,6 +351,8 @@ connection_t * connection;
 					
 						case EVT_LE_ADVERTISING_REPORT:
 						{
+                                                  
+                                                        PRINTDEBUG("event_received EVT_LE_ADVERTISING_REPORT at time: %d \n", event->ISR_timestamp);
 							connection = NET_Get_currentConnection_CB();
 							if(connection!=NULL)
 							{
@@ -412,6 +419,7 @@ connection_t * connection;
 					{			
 						case EVT_LE_CONN_COMPLETE:
 						{
+                                                        PRINTDEBUG("event_received EVT_LE_CONN_COMPLETE at time: %d \n", event->ISR_timestamp);
 							connection=NET_get_connection_by_status_CB(ST_UNESTABLISHED);
 							evt_le_connection_complete *cc =  (void*) event->evt_data;
 							ch_ret = CH_Connection_Complete_perispheral_BLE(connection,cc->handle,cc->peer_bdaddr );
@@ -460,7 +468,7 @@ connection_t * connection;
 					case EVT_LE_CONN_COMPLETE:
 					{
 						/*execute the connection complete procedure*/
-					
+                                                PRINTDEBUG("event_received EVT_LE_CONN_COMPLETE at time: %d \n", event->ISR_timestamp);
 						evt_le_connection_complete *cc =  (void*) event->evt_data;
 					
 						connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
@@ -579,6 +587,7 @@ connection_t * connection;
 				{
 					case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
 					{
+                                                PRINTDEBUG("event_received EVT_BLUE_GATT_PROCEDURE_COMPLETE at time: %d \n", event->ISR_timestamp);
 						evt_gatt_procedure_complete * pr =(evt_gatt_procedure_complete *) event->evt_data; 
 						if(pr->error_code != BLE_STATUS_SUCCESS)
 						{

@@ -53,8 +53,9 @@ int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion){
     *fwVersion |= lmp_pal_subversion & 0xF;               // Patch Version Number
   }
 
-  HCI_Process(); // To receive the BlueNRG EVT
-
+  //HCI_Process(); // To receive the BlueNRG EVT
+  HCI_Get_Event_CB();
+  HCI_Packet_Release_Event_CB();
   return status;
 
 }

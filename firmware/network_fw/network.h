@@ -29,7 +29,7 @@ typedef enum{/*since we are using a flags for the network module this could be r
 
 NET_Status init_network(net_type_t net_type, dv_type_t device_type ,uint8_t N_reconnections, network_t ** net_output);/*initialized the network module*/
 
-NET_Status network_process(event_t * event);/*<! main network function: running the connection handler and the services handler >*/
+NET_Status network_process(/*event_t * event*/);/*<! main network function: running the connection handler and the services handler >*/
 
 NET_Status net_setup_connection_config(config_connection_t * config, 
                                        uint8_t * list_index, 
