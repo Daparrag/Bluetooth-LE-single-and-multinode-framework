@@ -1,6 +1,6 @@
 # BLE-Library for support Synchonous Multimedia Applications in BLE.
 
-{<img src="https://travis-ci.org/Daparrag/Lib.svg?branch=master" alt="Build Status" />}[https://travis-ci.org/Daparrag/Lib]
+<img src="https://travis-ci.org/Daparrag/Lib.svg?branch=master" alt="Build Status" />
 
 This  is a firmware  which contain a collection of low level modules used to guarantee synchonization  in a multipoint connections for bluetooth LE 4.1. This should be used for synchonous multimedia applications.
 
