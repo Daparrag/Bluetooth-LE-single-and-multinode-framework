@@ -3,7 +3,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <ble_firmware.h>
-
+#include <eventhandler.h>
 #ifdef BLE_APP_CONFIG
 #include "blefw_conf.h" 
 #endif

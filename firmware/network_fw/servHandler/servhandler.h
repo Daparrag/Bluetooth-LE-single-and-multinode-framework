@@ -50,7 +50,9 @@
 
 
 SERV_Status DSCV_primary_services_by_uuid(connection_t * connection); /*!< primitive used for discover services characterized by a specific UUID >*/
-SERV_Status DSCV_primary_char_by_uuid(connection_t * connection);	  /*!< primitive used for discovery a specific characterstic identified by an UUID >*/
+SERV_Status DSCV_primary_char_by_uuid(connection_t * connection);     /*!< primitive used for discovery a specific characterstic identified by an UUID >*/
+SERV_Status DSCV_Enable_Notify(connection_t * connection);            /*!< Enable notify for those characteristics who have this property>*/                     
+SERV_Status SH_Associate_att_handler_CB(connection_t * connection,uint16_t peer_attr_handler);   /*!< This function is used for associate an attribute_handler to specific connection's attribute >*/                     
 void service_error_handler(void);
 
 

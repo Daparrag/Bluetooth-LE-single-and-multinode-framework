@@ -8,7 +8,9 @@
  
 #define ROLE    GAP_CENTRAL_ROLE			/*!< Here is where is defined  the role for this device >*/
 
-#define MULTINODE							/*!< Used only if your device support multinode connections and if it is requiered for your application >*/
+#define MAX_CHAR_ALLOWED                                /*!< This is a reference to the maximum number of characterisitic associated to a service that the client will discover >*/
+
+#define MULTINODE					/*!< Used only if your device support multinode connections and if it is requiered for your application >*/
 
 
 #ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
@@ -65,12 +67,12 @@
 #define FIND_GEN_CHAR  					0x04			/*!< Used for discovery any attribute(s) on the peer device(s) >*/
 
 #ifndef DISC_SERVICE
-#define DISC_SERVICE					FIND_SPE_SERVICE	/*!< Use one of the follow: DONT_FIND_SERVICE, FIND_SPE_SERVICE, FIND_GEN_SERVICE >*/
+#define DISC_SERVICE					DONT_FIND_SERVICE	/*!< Use one of the follow: DONT_FIND_SERVICE, FIND_SPE_SERVICE, FIND_GEN_SERVICE >*/
 #endif
 
 
 #ifndef DISC_CHAR
-#define DISC_CHAR	        			FIND_SPE_CHAR		/*!< Use one of the follow: DONT_FIND_CHAR, FIND_SPE_CHAR, FIND_GEN_CHAR >*/
+#define DISC_CHAR	        			DONT_FIND_CHAR		/*!< Use one of the follow: DONT_FIND_CHAR, FIND_SPE_CHAR, FIND_GEN_CHAR >*/
 #endif
 
 /********************GENERAL_ADVERTISEMENT DEFAULT CONFIGURATION *************/
@@ -78,10 +80,10 @@
 #define ADV_EVT_TYPE  					ADV_IND               /*<!  advertisement event type   >*/
 #define ADV_IT_MIN    					(0x0040)              /*<!  advertisement interval min >*/
 #define ADV_IT_MAX    					(0x0040)              /*<!  advertisement interval max  >*/
-#define ADV_ADDR_TYPE 				 PUBLIC_ADDR           	  /*<!  advertisement address type  >*/
-#define ADV_POLICY  		   NO_WHITE_LIST_USE       		  /*<!  advertisement policy  >*/
+#define ADV_ADDR_TYPE 				        PUBLIC_ADDR           	  /*<!  advertisement address type  >*/
+#define ADV_POLICY  		                         NO_WHITE_LIST_USE       		  /*<!  advertisement policy  >*/
 #define SLAVE_INT_MIN   				(0x0020)           	  /*<!  slave connection interval min >*/
-#define SLAVE_INT_MAX   				  (0x00)              /*<!  slave connection interval max  >*/
+#define SLAVE_INT_MAX   				(0x0020)              /*<!  slave connection interval max  >*/
 /********************CONNECTION_SETUP DEFAULT CONFIGURATION *************/
 
 #define SCAN_P  						(0x0005)      		  /*!< Scan Interval 40ms. >*/			

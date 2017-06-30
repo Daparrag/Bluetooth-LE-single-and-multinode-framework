@@ -20,6 +20,8 @@
 #include "role_type.h"
 #include "uart_support.h"
 #include "stm32_bluenrg_ble.h"
+#include "ble_clock.h"
+#include "ble_status.h"
 #include <list.h>
 
 #ifndef BLE_APP_CONFIG
@@ -72,12 +74,14 @@ typedef struct{/*Used to control the service discovery */
   uint8_t services_to_find;           /*!< How many services have to be scanned >*/  
   uint8_t services_success_scanned;   /*!< Flag fire to indicate that all of the services fot this profile had been scanned >*/  
   uint8_t attr_success_scanned;       /*!< Flag fire once all the characterstics for this profile have been scanned >*/  
+  uint8_t notify_success_enable;     /*!< Flag fire once all the notifies for this profile have been enable >*/  
 }sv_ctrl_flags;
 
 typedef struct{
 uint8_t char_to_scan;							/*!< Amount of characteristics to be scanned >*/
 uint8_t char_scanned;							/*!< Amount of characteristics scanned >*/
 uint8_t char_discovery_success;   /*!< Flag fire once all the characterstics for this service have been scanned >*/
+uint8_t char_notify_enabled_success;   /*!< Flag fire once all the characterstics for this service have been scanned >*/
 }char_flags;
 
 struct _app_attr_t{/*This is a general attribute definition*/
@@ -90,6 +94,7 @@ struct _app_attr_t{/*This is a general attribute definition*/
   uint8_t encryKeySize;           /*!< minimum encription key size requirement for this attr: 7 to 16*/
   uint8_t isVariable;             /*!< 0x00:fixed attr length 0x01:var attr length*/
   uint16_t CharHandle;             /*!< characteristic handle.*/
+  uint16_t Associate_CharHandler;   /*!< peer characteristic handle associate to this connection.*/     
   uint8_t n_val;                  /*!< control counter of the number of values associate to this characteristic */
   struct _app_attr_t * next_attr;
 };
@@ -161,13 +166,14 @@ uint16_t slconnintervalmax;   /*!<  slave connection interval min value
 
 typedef enum{
 	SERV_SUCCESS=0x00,
-	SERV_ERROR=0x01
+	SERV_ERROR=0x01,
+        SERV_NOT_APPL=0x02
 }SERV_Status;
 
 
 typedef enum service_State{
   ST_SERVICE_DISCOVERY,							/*!< Device looking for services >*/
-  ST_CHAR_DISCOVERY						      /*!< Device looking for characteristics >*/
+  ST_CHAR_DISCOVERY					      /*!< Device looking for characteristics >*/
 }sv_state_t;
 
 
@@ -176,7 +182,7 @@ volatile uint8_t service_discovery;               /*!< this flag is fire when a 
 volatile uint8_t char_discovery;                  /*!< this flag is fire when a new char has been discovered >*/
 }sv_hdler_flags;
 
-typedef struct{/*to delete*/
+typedef struct{/*used to configure the device as a server or a client*/
   uint8_t serv_disc_mode;						/*!< this flag is setup for enable/disable the services scanning >*/    
   uint8_t char_disc_mode;						/*!< this flag is setup for enable/disable the characteristic discovery >*/
 }servhandler_conf;
@@ -186,6 +192,8 @@ typedef struct{/*to delete*/
 sv_hdler_flags flags;							/*!< service handler event flags*/
 servhandler_conf config;						/*service handler module configuration*/
 }service_hdl_t;
+
+
 
 
 /******************************************CONNECTION HANDLER DEFINITIONS**************************************/
@@ -205,7 +213,8 @@ ST_OBSERVER,						  /*!<   handler the communication as observer node >*/
 ST_BROADCAST, 						/*!< handler the communication as broadcast node >*/
 ST_CONNECTED_WAIT_DISC,		/*!< connection wait for interchange services and characterstics >*/
 ST_CREATE_CONNECTION,     /*!< connection wait for connection set up >*/
-ST_TIME_OUT,  						/*!< the connection exceed the time for stablishement >*/
+ST_TIME_OUT,            /*!< the connection exceed the time for stablishement >*/
+ST_ENABLE_NOTIFY,
 ST_CONNECTION_LOST        /*!< connection lost or impossible to set up >*/
 }cn_state_t;
 
@@ -245,7 +254,7 @@ app_profile_t * Node_profile;         /*!< could be one profile x slave (most co
 uint8_t device_type_addrs;            /*!< slave device addrs type*/
 uint8_t device_address[6];            /*!< device address val*/
 config_connection_t * cconfig;        /*!< device has a special connection configuration(optional) >*/
-servhandler_conf * sconfig;            /*!< device has a special services configuration(optional) >*/
+servhandler_conf  sconfig;            /*!< device has a special services configuration(optional) >*/
 cn_state_t connection_status;         /*!< this is the connection status.*/
 sv_state_t service_status;
 

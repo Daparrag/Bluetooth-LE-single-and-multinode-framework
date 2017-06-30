@@ -40,9 +40,9 @@ static connection_t * NET_Get_currentConnection_CB(void); /* retreave the curren
 
 static connection_t * NET_get_connection_by_address_BLE(uint8_t * addrss); /* retreave a connection characterized by and specific address */
 
-static connection_t * NET_get_connection_by_status_CB(uint8_t _status);   /* retreave a connection characterized by and specific status */
 
-static connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler);    /* retreave a connection characterized by and specific connection handler */
+
+
 
 /************************ NETWORK  LED ADVERTISEMENT STATUS  FUNCTIONS ********************/
 
@@ -145,6 +145,19 @@ void network_clean_wait_end_procedure(void ){
 	return network.flags.wait_end_procedure;
 }
 
+/**
+  * @brief  This function is used for inform the general status of the connection.
+  * @param void.
+  * @retval void.
+  */ 
+        
+uint8_t network_get_status(void){
+
+	if(network.device_cstatus==DEVICE_READY) return 1;
+        return 0;
+}
+
+   
 
 /**
   * @brief  This function Initialize the network module.
@@ -230,9 +243,13 @@ void init_service_handler(void){
 		uint8_t i;
 		for(i=0; i < EXPECTED_NODES; i++)
 			network.mMSConnection[i].service_status = ST_SERVICE_DISCOVERY;
+                        network.mMSConnection[i].sconfig.char_disc_mode = DISC_CHAR;
+                        network.mMSConnection[i].sconfig.serv_disc_mode = DISC_SERVICE; 
 
 	#else
 			network.mMSConnection.service_status = ST_SERVICE_DISCOVERY;
+                        network.mMSConnection.sconfig.char_disc_mode = DISC_CHAR;
+                        network.mMSConnection.sconfig.serv_disc_mode = DISC_SERVICE; 
 	#endif
 }
 
@@ -254,11 +271,9 @@ void init_connection_handler(void){
   * @retval none
   */
 NET_Status network_process(/*event_t * event*/){
-  if(network.device_cstatus==DEVICE_READY){
-  NET_Control_led_status_BLE();
-  return NET_SUCCESS;
-  }
-event_t * event = (event_t *)HCI_Get_Event_CB();
+event_t * event;
+  if(network.device_cstatus!=DEVICE_READY) event = (event_t *)HCI_Get_Event_CB();
+  else  event = NULL;
 NET_Status ret;
 	switch(device_role){
 		case DEVICE_CENTRAL:
@@ -379,7 +394,9 @@ connection_t * connection;
 							}
 						}
 						break;
-						
+                                                
+                                                default:
+                                                break;	
 					}
 			
 				}else if(network_get_wait_end_procedure()==0)
@@ -442,6 +459,9 @@ connection_t * connection;
 							connection->connection_status=ST_CONNECTED_WAIT_DISC;
 						}
 						break;
+                                                default:
+                                                break;
+                                                
 					}
 				}else if(network_get_wait_end_procedure()==0)
 				{
@@ -498,6 +518,8 @@ connection_t * connection;
 					
 					}
 					break;
+                                default:
+                                break; 
 				}
 			}else if(network_get_wait_end_procedure()==0)
 			{
@@ -586,9 +608,10 @@ connection_t * connection;
 				switch(event->event_type)
 				{
 					case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
-					{
+					{     
                                                 PRINTDEBUG("event_received EVT_BLUE_GATT_PROCEDURE_COMPLETE at time: %d \n", event->ISR_timestamp);
 						evt_gatt_procedure_complete * pr =(evt_gatt_procedure_complete *) event->evt_data; 
+                                                
 						if(pr->error_code != BLE_STATUS_SUCCESS)
 						{
 							PRINTDEBUG(" An Error: (0x%04x) occur in the discovery process please check all the paramters\n", pr->error_code);
@@ -599,19 +622,43 @@ connection_t * connection;
                       
 						if(connection==NULL)
 						{
-							PRINTDEBUG("An Error occur in the discovery process because an invalid connection handler has been received please check it. \n");
+							PRINTDEBUG("An Error occur in the interchange process because an invalid connection handler has been received please check it. \n");
 							return NET_ERROR;
 						}
 						
 						network_clean_wait_end_procedure(); 
 						
-					} 
-					break; 
+					}
+					break;
+                                        case EVT_BLUE_GATT_DISC_READ_CHAR_BY_UUID_RESP:
+                                        {
+                                             PRINTDEBUG("event_received EVT_BLUE_GATT_DISC_READ_CHAR_BY_UUID_RESP at time: %d (ms)\n", event->ISR_timestamp);
+                                             evt_gatt_disc_read_char_by_uuid_resp * resp = (evt_gatt_disc_read_char_by_uuid_resp *)event->evt_data;
+                                             uint8_t i;
+                                             connection = NET_get_connection_by_chandler_BLE(resp->conn_handle);
+                                             
+                                             if(connection==NULL){
+                                                PRINTDEBUG("An Error occur in the interchange attribute process because an invalid connection handler has been received please check it. \n");
+                                                 return NET_ERROR;
+                                             }
+                                             serv_ret = SH_Associate_att_handler_CB(connection,resp->attr_handle);
+                                             
+                                             //network_clean_wait_end_procedure();
+                                             
+                                        }
+                                        break;
+                                        case EVT_BLUE_ATT_FIND_BY_TYPE_VAL_RESP:
+                                        {
+                                          PRINTDEBUG("event_received EVT_BLUE_ATT_FIND_BY_TYPE_VAL_RESP at time: %d (ms)\n", event->ISR_timestamp);
+                                        }
+                                        break;
+                                        default:
+                                        break;
 				}
 			}else if((network_get_wait_end_procedure()==0) 
 					  && (network.flags.connection_stablishment_complete!=0))
 			{
-				if(network.num_device_serv_discovery==network.num_device_connected)
+				if( (network.num_device_serv_discovery==network.num_device_connected))
 				{
 					network.device_cstatus =  DEVICE_READY;
 					return NET_SUCCESS;
@@ -633,7 +680,18 @@ connection_t * connection;
 				{
 					case ST_SERVICE_DISCOVERY:
 					{
-						if(DISC_SERVICE==FIND_SPE_SERVICE)serv_ret = DSCV_primary_services_by_uuid(connection);
+                                                
+                                            /*idealy this  has to be by connection not as a general flag configuration*/
+						if(connection->sconfig.serv_disc_mode == FIND_SPE_SERVICE)
+                                                {
+                                                  serv_ret = DSCV_primary_services_by_uuid(connection);
+                                                  
+                                                }else if(connection->sconfig.serv_disc_mode == DONT_FIND_SERVICE){
+                                                  /*This is used in case in which the devices is only a server*/
+                                                  connection->Node_profile->svflags.services_success_scanned=1;
+                                                  connection->service_status = ST_CHAR_DISCOVERY;
+                                                  return NET_SUCCESS;
+                                                }
 						
 						if(serv_ret!=SERV_SUCCESS)
 						{
@@ -653,7 +711,15 @@ connection_t * connection;
 					
 					case ST_CHAR_DISCOVERY:
 					{
-						if(DISC_CHAR==FIND_SPE_CHAR) serv_ret = DSCV_primary_char_by_uuid(connection);
+                                          
+                                              /*idealy this  has to be by connection not as a general flag configuration*/  
+                                              if(connection->sconfig.char_disc_mode==FIND_SPE_CHAR){
+                                                  serv_ret = DSCV_primary_char_by_uuid(connection);
+                                                  
+                                              }else if (connection->sconfig.char_disc_mode==DONT_FIND_CHAR){
+                                                connection->Node_profile->svflags.attr_success_scanned=1;
+                                                serv_ret=SERV_SUCCESS;
+                                              }
 						
 						if(serv_ret!=SERV_SUCCESS)
 						{
@@ -667,29 +733,34 @@ connection_t * connection;
 							/*this status is not possible something is wrong*/
 							PRINTDEBUG(" Error, It is not possible to scan atributes witout first finish the scanning services please check it\n");
 							return NET_ERROR;
+                                                        
 						}else if((connection->Node_profile->svflags.attr_success_scanned==1) 
 								 && (connection->Node_profile->svflags.services_success_scanned==1))
 						{
 							network.num_device_serv_discovery+=1;
-							connection->connection_status =  ST_STABLISHED;
+							connection->connection_status = ST_ENABLE_NOTIFY;    
 							reset_profile_flags(connection->Node_profile);
-							return  NET_SUCCESS;
+                                                        return NET_SUCCESS;
 						}
 						
 						network_set_wait_end_procedure();
 					}
 					break;
-					
+                                default:
+                                break;  	
 				}
 			}
 		}
 		break;
 		case DEVICE_READY:
-		{
-			
-		}
-		break;
-		}
+		{       
+
+                                       
+                }/*end ready*/
+                break;
+                default:
+                break;
+          }
 return NET_SUCCESS;       
 }
 
@@ -816,6 +887,42 @@ if(network.mMSConnection.Node_profile==NULL){
 return NET_SUCCESS;
 }
 
+/**
+  * @brief  define a specific services_handler configuration used for setup the device as a client and/or server
+  * @param  uint8_t serv_disc_mode: define how the services will be discovery.
+  * @param  uint8_t char_disc_mode: define how the attributes will be discovery.
+  * @param  uint8_t * list_index: list of connections
+  * @param  size_t list_index_size: size of the lists of connections
+  * @retval NET_Status: success or error code. 
+  */
+/*setup a service_handler configuration for an specific connection*/
+NET_Status service_handler_config(uint8_t serv_disc_mode, 
+                                  uint8_t char_disc_mode,
+                                  uint8_t * connection_index, 
+				  size_t connection_index_size){
+uint8_t i;
+uint8_t index;                                                          
+#ifdef MULTINODE
+      if(connection_index_size-1 >= EXPECTED_NODES || connection_index== NULL){
+            PRINTF("error during service_handler_config: wrong imput parameters\n");
+            return NET_ERROR;
+      }
+      
+      for(i=0; i < connection_index_size; i++){
+          index = *connection_index++;
+          network.mMSConnection[index].sconfig.char_disc_mode=char_disc_mode;
+          network.mMSConnection[index].sconfig.serv_disc_mode=serv_disc_mode;
+      }      
+#else
+     network.mMSConnection.sconfig.char_disc_mode=char_disc_mode;
+     network.mMSConnection.sconfig.serv_disc_mode=serv_disc_mode;
+#endif
+                                    
+                                    
+ 
+/*setup_ service handler configuration  ok*/
+return NET_SUCCESS;
+}
 
 /**
   * @brief  define a specific connection configuration  for a list of connections
@@ -982,4 +1089,33 @@ connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler)
   #endif
 return connection;
 }
+
+
+void NET_get_connection_by_chandler_attrhandler_BLE(uint16_t chandler, uint16_t attrhandler, app_service_t ** serv, app_attr_t ** att){/* retreave a connection characterized by and specific connection handler and atribute handler associated*/
+connection_t * connection = NULL;
+ uint8_t i;
+ uint8_t j;
+ uint8_t nservices;
+ uint8_t nattr;
+ app_service_t * services; 
+ app_attr_t * attr;
+
+ 
+  connection =  NET_get_connection_by_chandler_BLE(chandler);
+  nservices = connection->Node_profile->n_service;
+  services= connection->Node_profile->services;
+    for(i=0; i < nservices; i++ ){
+      attr = services->attrs;
+      nattr = services->n_attr;
+      for(j=0; j < nattr; j++){
+        if(attr->CharHandle==attrhandler){
+         *att= &(*(app_attr_t *)attr);
+         *serv = &(*(app_service_t *)services);
+         break;
+        }
+        attr=attr->next_attr;
+      }
+      services=services->next_service; 
+    }
+}    
 

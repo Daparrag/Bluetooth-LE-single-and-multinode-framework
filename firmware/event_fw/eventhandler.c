@@ -379,19 +379,19 @@ void * HCI_Get__Event_CB(){
                   case EVT_LE_CONN_COMPLETE:
                   {
                     evt_le_connection_complete *cc = (void *)evt->data;
-                    ret_event.event_type = EVT_LE_CONN_COMPLETE;
-                    ret_event.evt_data =cc;
-                    ret_event.ISR_timestamp = hciReadPacket->Isr_timestamp;
-                    return (void*)&ret_event;
+                   // ret_event.event_type = EVT_LE_CONN_COMPLETE;
+                   // ret_event.evt_data =cc;
+                   // ret_event.ISR_timestamp = hciReadPacket->Isr_timestamp;
+                   // return (void*)&ret_event;
                   }
                   break;
                   case EVT_LE_ADVERTISING_REPORT:
                   {
                     le_advertising_info *pr = (le_advertising_info*) (((uint8_t*)evt->data)+1);
-                    ret_event.event_type = EVT_LE_ADVERTISING_REPORT;
-                    ret_event.evt_data = pr;
-                    ret_event.ISR_timestamp = hciReadPacket->Isr_timestamp;
-                    return (void*)&ret_event;
+                   // ret_event.event_type = EVT_LE_ADVERTISING_REPORT;
+                  //  ret_event.evt_data = pr;
+                  //  ret_event.ISR_timestamp = hciReadPacket->Isr_timestamp;
+                  //  return (void*)&ret_event;
                   }
                   break;
 
@@ -409,10 +409,10 @@ void * HCI_Get__Event_CB(){
                 case EVT_BLUE_GATT_PROCEDURE_COMPLETE:
                 {
                   evt_gatt_procedure_complete * pr = (void*)blue_evt->data;
-                  ret_event.event_type=EVT_BLUE_GATT_PROCEDURE_COMPLETE;
-                  ret_event.evt_data = pr;
-                  ret_event.ISR_timestamp = hciReadPacket->Isr_timestamp;;
-                  return (void*)&ret_event;
+                 // ret_event.event_type=EVT_BLUE_GATT_PROCEDURE_COMPLETE;
+                 // ret_event.evt_data = pr;
+                //  ret_event.ISR_timestamp = hciReadPacket->Isr_timestamp;;
+                //  return (void*)&ret_event;
                 }
                 break;
               }

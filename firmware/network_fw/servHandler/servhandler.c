@@ -62,8 +62,6 @@ num_service = connection->Node_profile->n_service;
 	return SERV_ERROR;
 	}
 serv_control_flags->services_to_find-=1;
-
-
 	/*primary services have been success discovered*/
 	 return  SERV_SUCCESS;
 
@@ -119,6 +117,8 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
       return SERV_ERROR;
     }
     
+    
+    
    /*< at this point is possible to send the charactersitic discover request >*/
     
    ret = aci_gatt_disc_charac_by_uuid(connection->Connection_Handle,
@@ -137,6 +137,121 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
   attr_control_flags->char_scanned+=1;
   /*a characteristic have been discovered*/ 
   return  SERV_SUCCESS;
+    
+}
+
+
+SERV_Status DSCV_Enable_Notify(connection_t * connection)
+{
+ 
+  uint8_t i;
+  uint8_t num_char;
+  app_attr_t * charac;
+  app_service_t * service;
+  char_flags * attr_control_flags;
+  
+   uint8_t client_char_conf_data[] = {0x01, 0x00}; // Enable notifications
+  
+   /*lets get the correct service*/
+    service = connection->Node_profile->services;
+    while(service!=NULL && service->chrflags.char_notify_enabled_success!=0){
+       service = service->next_service;
+    }
+    
+    if(service==NULL){
+       connection->Node_profile->svflags.notify_success_enable=1;
+       return SERV_SUCCESS;
+    }
+    
+    /*At this point: its where it'll enable the notify for each characteristic */
+    num_char = service->n_attr;
+    attr_control_flags = &service->chrflags;
+    /*validate that this is the correct characteristic*/
+    
+    if( (num_char==0) || (attr_control_flags->char_scanned >= attr_control_flags->char_to_scan)){
+    /*this profile does not have chatacteristics to enable*/
+      connection->Node_profile->svflags.notify_success_enable=1;
+      attr_control_flags->char_notify_enabled_success=1;
+      return SERV_SUCCESS;
+    }
+    
+    
+        /*retreive the correct charateristic to anable*/
+    charac = service->attrs;
+    attr_control_flags = &service->chrflags;
+    
+    for(i=0; i < attr_control_flags->char_scanned; i++)
+    {
+      charac = charac->next_attr;
+    }
+    
+    if(charac==NULL){
+      /*something is wrong */
+      return SERV_ERROR;
+    }
+ 
+    /*< at this point is possible to enable the notify using the low level command >*/
+    
+    if((charac->charProperties && CHAR_PROP_NOTIFY ) == 1){
+      
+          struct timer t;
+          Timer_Set(&t,CLOCK_SECOND*10);
+        /*  while(ret=(aci_gatt_write_charac_descriptor(connection->Connection_Handle, charac->CharHandle+2, 2, client_char_conf_data))==BLE_STATUS_INSUFFICIENT_RESOURCES)
+          {
+              if(Timer_Expired(&t))
+              {
+                return SERV_ERROR;
+              }
+    
+          }*/
+  
+    }else{
+      attr_control_flags->char_scanned+=1;
+      return SERV_NOT_APPL;
+    }
+    
+   attr_control_flags->char_scanned += 1;
+  /*notify setup complete*/ 
+  return  SERV_SUCCESS;
+}
+
+SERV_Status SH_Associate_att_handler_CB(connection_t * connection,uint16_t peer_attr_handler){
+
+    uint8_t i;
+    app_attr_t * charac;
+    app_service_t * service;
+    char_flags * attr_control_flags;
+    
+     /*lets get the correct service*/
+    service = connection->Node_profile->services;
+    
+     while(service!=NULL && service->chrflags.char_discovery_success!=0){
+      service = service->next_service;
+    }
+    
+        if(service==NULL){
+        /*all the characterictics for this profile had been discovery*/
+        /*then this is not possible verify*/  
+         return SERV_SUCCESS;
+        }
+     
+    /*retreive the correct charateristic to enable*/
+    charac = service->attrs;
+    attr_control_flags = &service->chrflags;
+    for(i=0; i < ( attr_control_flags->char_scanned - 1); i++)
+    {
+      charac = charac->next_attr;
+    }
+    
+    if(charac==NULL){
+    /*something is get it wrong*/
+      return SERV_ERROR;
+    }
+    
+    /*associate this attribute handler to this charactersitic*/
+    charac->Associate_CharHandler=peer_attr_handler;
+    
+    return SERV_SUCCESS;
     
 }
 
