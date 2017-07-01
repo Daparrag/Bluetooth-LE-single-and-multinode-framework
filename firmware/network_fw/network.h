@@ -49,7 +49,7 @@ connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler);    /* retr
 connection_t * NET_get_connection_by_status_CB(uint8_t _status);   /* retreave a connection characterized by and specific status */
 
 
-void NET_get_connection_by_chandler_attrhandler_BLE(uint16_t chandler, uint16_t attrhandler,app_service_t ** serv, app_attr_t ** att);/* retreave a connection characterized by and specific connection handler and atribute handler associated*/
+void NET_get_service_and_attributes_by_chandler_BLE(uint16_t chandler, uint16_t attrhandler,app_service_t ** serv, app_attr_t ** att);/* retreave a connection characterized by and specific connection handler and atribute handler associated*/
 
 uint8_t network_get_status(void);
 #endif /*NET_BLE_H*/

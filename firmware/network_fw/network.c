@@ -415,9 +415,19 @@ connection_t * connection;
 				}else if(network_get_wait_end_procedure()==1)
                                 {
                                   if(Timer_Expired(&network.time_alive)){
-                                    PRINTDEBUG("The devices was not able to identify %d perispherals:\n",(EXPECTED_NODES - network.num_device_found));
-                                    PRINTDEBUG("the device will try to set up a connection with %d pherispherals\n",network.num_device_found);
+                                    PRINTDEBUG("The device was not able to identify any perispheral:\n");
+                                    
+                                    if(network.num_device_found!=0){
+                                      PRINTDEBUG("the device will try to set up a connection with %d pherispherals\n",network.num_device_found);
                                       network.device_cstatus=DEVICE_READY_TO_CONNECT;
+                                    }else{
+                                      PRINTDEBUG("the device will restart the scanning of perispherals\n");
+                                      Timer_Set(&network.time_alive, CLOCK_SECOND * 36);
+                                      network_set_wait_end_procedure();
+                                      return NET_SUCCESS;
+                                    }
+                                    
+                                    if(network.num_device_found!=0)
                                       network_clean_wait_end_procedure();
                                   }
                                 }
@@ -634,7 +644,6 @@ connection_t * connection;
                                         {
                                              PRINTDEBUG("event_received EVT_BLUE_GATT_DISC_READ_CHAR_BY_UUID_RESP at time: %d (ms)\n", event->ISR_timestamp);
                                              evt_gatt_disc_read_char_by_uuid_resp * resp = (evt_gatt_disc_read_char_by_uuid_resp *)event->evt_data;
-                                             uint8_t i;
                                              connection = NET_get_connection_by_chandler_BLE(resp->conn_handle);
                                              
                                              if(connection==NULL){
@@ -738,7 +747,7 @@ connection_t * connection;
 								 && (connection->Node_profile->svflags.services_success_scanned==1))
 						{
 							network.num_device_serv_discovery+=1;
-							connection->connection_status = ST_ENABLE_NOTIFY;    
+							connection->connection_status = ST_STABLISHED;    
 							reset_profile_flags(connection->Node_profile);
                                                         return NET_SUCCESS;
 						}
@@ -1091,7 +1100,7 @@ return connection;
 }
 
 
-void NET_get_connection_by_chandler_attrhandler_BLE(uint16_t chandler, uint16_t attrhandler, app_service_t ** serv, app_attr_t ** att){/* retreave a connection characterized by and specific connection handler and atribute handler associated*/
+void NET_get_service_and_attributes_by_chandler_BLE(uint16_t chandler, uint16_t attrhandler, app_service_t ** serv, app_attr_t ** att){/* retreave a connection characterized by and specific connection handler and atribute handler associated*/
 connection_t * connection = NULL;
  uint8_t i;
  uint8_t j;
@@ -1108,7 +1117,7 @@ connection_t * connection = NULL;
       attr = services->attrs;
       nattr = services->n_attr;
       for(j=0; j < nattr; j++){
-        if(attr->CharHandle==attrhandler){
+        if(attr->Associate_CharHandler+1==attrhandler){
          *att= &(*(app_attr_t *)attr);
          *serv = &(*(app_service_t *)services);
          break;

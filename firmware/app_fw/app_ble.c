@@ -10,10 +10,11 @@ uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
 uint8_t  bnrg_expansion_board =  IDB04A1;
 uint8_t service_list_init=0;            /*!< flag used to initialized the service attribute list */
 
-const uint8_t DEVICE_BDADDR[] =  { 0x55, 0x11, 0x07, 0x01, 0x16, 0xE1}; /*device addrs*/
-const char local_name[] = {AD_TYPE_COMPLETE_LOCAL_NAME,'B','L','E','-','U','N','O'}; /*device name*/
+static int name_size;
+static int address_size;
+const uint8_t * PTR_DEVICE_BDADDR=NULL;
+const char * ptr_local_name=NULL;
 /************************************************************/
-
 tBleStatus(*const  GAP_INIT_FUNC [BLE_ARCH_MASK+1])(uint8_t ,uint8_t ,uint8_t ,uint16_t* ,
                                                     uint16_t* ,uint16_t* ) = { /*architecture independent array, call the correct function according to the architecture version IDB05A1 or IDB04A1*/                                            
 MY_HAVE_IDB0xA1(0, aci_gap_init),                                            
@@ -61,6 +62,27 @@ int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion){
 }
 
 /**
+  * @brief  This function is called to setup the  address and the name of the device in the APP module.
+  * @param  none
+  * @retval APP_Status: Value indicating success or error code.
+  */
+
+APP_Status APP_Set_Address_And_Name_BLE(const uint8_t * device_address,int device_address_size,const char * localname, int name_size)/*used for setup a device address and name*/
+  {
+      PTR_DEVICE_BDADDR = device_address;
+      ptr_local_name = localname;
+      if(PTR_DEVICE_BDADDR==NULL || ptr_local_name == NULL){
+          return APP_ERROR;
+      }
+      name_size=name_size;
+      address_size=device_address_size;
+      
+      return APP_SUCCESS;
+  }
+
+
+
+/**
   * @brief  This function is called to init the BLE architecture.
   * @param  none
   * @retval APP_Status: Value indicating success or error code.
@@ -78,7 +100,7 @@ APP_Status APP_Init_BLE(void){/*can be used by any application*/
     bnrg_expansion_board = IDB05A1; 
   	}
 
-  ret = aci_hal_write_config_data(CONFIG_DATA_PUBADDR_OFFSET, CONFIG_DATA_PUBADDR_LEN, DEVICE_BDADDR);
+  ret = aci_hal_write_config_data(CONFIG_DATA_PUBADDR_OFFSET, CONFIG_DATA_PUBADDR_LEN, PTR_DEVICE_BDADDR);
 
 	if (ret != BLE_STATUS_SUCCESS)
   	{
@@ -235,8 +257,8 @@ APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
   */
 
 void * APP_get_direct_addrs_BLE(int * size){
-    *size = sizeof(DEVICE_BDADDR);
-  return (void *)&(DEVICE_BDADDR);  
+    *size = address_size;
+  return (void *)PTR_DEVICE_BDADDR;  
 }
 
 
@@ -304,7 +326,7 @@ return bnrg_expansion_board;
   * retval: const char *: pointer associated to the local name.
   */
 const char * get_local_name (void){
-  return local_name;
+  return ptr_local_name;
 }
 
 /**
@@ -312,10 +334,8 @@ const char * get_local_name (void){
   * @param void.
   * retval: uint8_t: device name size.
   */
-uint8_t  get_local_name_size (void){
-  return (sizeof(local_name));
+int  get_local_name_size (void){
+  return name_size;
 }
-
-
 
 

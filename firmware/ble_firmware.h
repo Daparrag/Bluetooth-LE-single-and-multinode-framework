@@ -214,7 +214,6 @@ ST_BROADCAST, 						/*!< handler the communication as broadcast node >*/
 ST_CONNECTED_WAIT_DISC,		/*!< connection wait for interchange services and characterstics >*/
 ST_CREATE_CONNECTION,     /*!< connection wait for connection set up >*/
 ST_TIME_OUT,            /*!< the connection exceed the time for stablishement >*/
-ST_ENABLE_NOTIFY,
 ST_CONNECTION_LOST        /*!< connection lost or impossible to set up >*/
 }cn_state_t;
 

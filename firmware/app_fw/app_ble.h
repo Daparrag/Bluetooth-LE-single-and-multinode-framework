@@ -61,9 +61,6 @@
 #endif
 
 
-/*Local_Macros*/
-#define MY_HAVE_IDB0xA1(arch, func_name) ((arch) == 1 ?func_name##_IDB05A1:func_name##_IDB04A1)/*concatenation of the funtion name and the architecture*/
-#define BLE_ARCH_MASK 1 /*used for reconize if we have a IDB04A1 or IDB05A1 architecture  BLE_ARCH_MASK is = #architectures -1 */
 
 #ifndef UUID_TYPE
 #define UUID_TYPE UUID_TYPE_128
@@ -77,6 +74,10 @@
 /**
 * global_func_declaration
 */
+APP_Status APP_Set_Address_And_Name_BLE(const uint8_t * device_address,
+                                        int device_address_size,
+                                        const char * localname, 
+                                        int name_size);/*used for setup a device address and name*/
 APP_Status APP_Init_BLE(void); /*init the BLE_arch*/
 APP_Status APP_init_BLE_Profile(app_profile_t * profile);/*init the BLE profile */
 APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service);/*add BLE services*/
@@ -87,6 +88,6 @@ void * APP_get_direct_addrs_BLE(int * size);/* used for retreive the addrs of th
 void * APP_get_direct_name_BLE(int * size); /*used for retrieve the name of the BLE device*/
 uint8_t get_harware_version(void); /*return the harware version IDB0xA1*/
 const char * get_local_name (void);/*return pointer to the local name*/
-uint8_t  get_local_name_size (void);/*return the size of the local name*/
+int  get_local_name_size (void);/*return the size of the local name*/
 
 #endif /* PTP_BLE_H */
