@@ -855,8 +855,7 @@ return 	connection;
 NET_Status net_setup_profile_definition(app_profile_t * profile_def, 
 					uint8_t * list_index, 
 				        size_t list_index_size){
-uint8_t i;
-uint8_t index;
+
 /*check the input*/
 if(profile_def==NULL){
 
@@ -865,7 +864,8 @@ if(profile_def==NULL){
 }
 
 #ifdef MULTINODE
-
+uint8_t i;
+uint8_t index;
 if(list_index_size-1 >= EXPECTED_NODES || list_index== NULL){
 	PRINTF("error during net_setup_profile_definition: wrong imput parameters\n");
 	return NET_ERROR;
@@ -909,9 +909,10 @@ NET_Status service_handler_config(uint8_t serv_disc_mode,
                                   uint8_t char_disc_mode,
                                   uint8_t * connection_index, 
 				  size_t connection_index_size){
-uint8_t i;
-uint8_t index;                                                          
+                                                        
 #ifdef MULTINODE
+uint8_t i;
+uint8_t index;    
       if(connection_index_size-1 >= EXPECTED_NODES || connection_index== NULL){
             PRINTF("error during service_handler_config: wrong imput parameters\n");
             return NET_ERROR;
@@ -944,8 +945,6 @@ NET_Status net_setup_connection_config(config_connection_t * config,
 					uint8_t * list_index, 
                                         size_t list_index_size){
 
-uint8_t i;
-uint8_t index;
 /*check the input*/
 if(config==NULL){
 
@@ -955,6 +954,8 @@ if(config==NULL){
 }
 
 #ifdef MULTINODE
+uint8_t i;
+uint8_t index;
 if(list_index_size >= EXPECTED_NODES || list_index== NULL){
 	PRINTF("net_setup_connection_config: error during net_setup_connection_config: wrong imput parameters\n");
 	return NET_ERROR;
@@ -996,10 +997,11 @@ return NET_SUCCESS;
 
 uint8_t validate_new_pherispheral_address(uint8_t *peer_address){
 	
-	uint8_t i;
-	uint8_t j;
+
     uint8_t address_valid=1;
 #ifdef MULTINODE
+    	uint8_t i;
+	uint8_t j;
 
 	for (i=0; i < network.num_device_found; i ++){
 			address_valid=0;
@@ -1128,3 +1130,20 @@ connection_t * connection = NULL;
     }
 }    
 
+
+/**
+  * @brief  retrieve one connection by its index
+  * @param  uint8_t index: index of the connection to retrieve
+  * @retval connection_t *: Pointer to the retrieved connection. 
+  */
+connection_t * NET_get_connection_by_index_CB(uint8_t _index){
+  connection_t * connection = NULL;
+  #ifdef MULTINODE
+  connection=&network.mMSConnection[_index];
+  #else
+  connection=&network.mMSConnection;
+  #endif
+  
+  return connection;
+
+}

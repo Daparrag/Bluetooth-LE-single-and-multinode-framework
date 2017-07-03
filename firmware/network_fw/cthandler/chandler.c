@@ -292,11 +292,15 @@ CHADLE_Status CH_Connection_Complete_perispheral_BLE(connection_t * connection, 
     
     for (i=0; i<5; i++) {
         PRINTDEBUG("0x%02X-", peer_addrs[i]);
+        connection->device_address[i]=peer_addrs[i];
       }
-        PRINTDEBUG("0x%02X", peer_addrs[i]);    
+        PRINTDEBUG("0x%02X", peer_addrs[i]);
+        connection->device_address[i]=peer_addrs[i];
         PRINTDEBUG("\n"); 
 
-  connection->Connection_Handle=handle;      
+  connection->Connection_Handle=handle;
+  
+  
   return CHADLE_SUCCESS;
 
 }

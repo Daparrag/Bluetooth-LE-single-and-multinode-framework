@@ -44,10 +44,11 @@ NET_Status service_handler_config(uint8_t serv_disc_mode,
                                   uint8_t * connection_index, 
 				  size_t connection_index_size); /*<! Used by the application to indicate a specific service_handler configuration  to one or a set of connection(s) (used to define a node as a client or as a server)>*/
 
-connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler);    /* retreave a connection characterized by and specific connection handler */
+connection_t * NET_get_connection_by_chandler_BLE(uint16_t chandler);    /* retreave a connection characterized by one specific connection handler */
 
-connection_t * NET_get_connection_by_status_CB(uint8_t _status);   /* retreave a connection characterized by and specific status */
+connection_t * NET_get_connection_by_status_CB(uint8_t _status);   /* retreave a connection characterized by one specific status */
 
+connection_t * NET_get_connection_by_index_CB(uint8_t _index);    /* retreave a connection characterized by one specific index */
 
 void NET_get_service_and_attributes_by_chandler_BLE(uint16_t chandler, uint16_t attrhandler,app_service_t ** serv, app_attr_t ** att);/* retreave a connection characterized by and specific connection handler and atribute handler associated*/
 
