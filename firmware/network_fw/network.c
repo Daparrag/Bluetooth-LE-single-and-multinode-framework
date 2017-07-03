@@ -1147,3 +1147,11 @@ connection_t * NET_get_connection_by_index_CB(uint8_t _index){
   return connection;
 
 }
+
+uint8_t get_num_connections(void)
+{
+	uint8_t n_connections;
+	n_connections = network.num_device_connected;
+	return n_connections;
+
+}

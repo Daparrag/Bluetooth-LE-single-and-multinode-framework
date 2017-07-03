@@ -53,4 +53,6 @@ connection_t * NET_get_connection_by_index_CB(uint8_t _index);    /* retreave a 
 void NET_get_service_and_attributes_by_chandler_BLE(uint16_t chandler, uint16_t attrhandler,app_service_t ** serv, app_attr_t ** att);/* retreave a connection characterized by and specific connection handler and atribute handler associated*/
 
 uint8_t network_get_status(void);
+
+uint8_t get_num_connections(void);/*<! return the number of connections>*/
 #endif /*NET_BLE_H*/
