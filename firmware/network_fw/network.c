@@ -1148,7 +1148,7 @@ connection_t * NET_get_connection_by_index_CB(uint8_t _index){
 
 }
 
-uint8_t get_num_connections(void)
+uint8_t NET_get_num_connections(void)
 {
 	uint8_t n_connections;
 	n_connections = network.num_device_connected;

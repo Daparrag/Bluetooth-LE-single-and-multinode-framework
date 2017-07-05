@@ -54,5 +54,5 @@ void NET_get_service_and_attributes_by_chandler_BLE(uint16_t chandler, uint16_t 
 
 uint8_t network_get_status(void);
 
-uint8_t get_num_connections(void);/*<! return the number of connections>*/
+uint8_t NET_get_num_connections(void);/*<! return the number of connections>*/
 #endif /*NET_BLE_H*/
