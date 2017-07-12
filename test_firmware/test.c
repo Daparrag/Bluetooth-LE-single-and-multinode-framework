@@ -14,7 +14,10 @@
  * @}
  */
 
-/* Private macros ------------------------------------------------------------*/
+/**************************************************static functions************************/
+void create_test_service(void);
+
+/************************************************ Private macros *************************/
 #ifndef COPY_VAR
 #define COPY_VAR(dest,source) memcpy(dest,(void*)source,sizeof((source)))
 #endif
@@ -33,19 +36,12 @@ const uint8_t charUuidRX2[16] = {0x66,0x9a,0x0c,0x20,0x00,0x08,0x96,0x9e,0xe2,0x
 
 
 app_profile_t PROFILE;
-
 app_service_t SERVICE1;
 app_service_t SERVICE2;
-
 app_attr_t ATTR11;
 app_attr_t ATTR12;
-
 app_attr_t ATTR21;
 app_attr_t ATTR22;
-
-
-
-
 
 
 
@@ -105,6 +101,55 @@ void print_device_name(char * name, int namesize){
   printf("Device name: ");
   for(i=0; i < namesize; i++)printf("%c",name[i]); 
    printf("\n");
+}
+
+
+
+
+
+
+void create_test_service(void){
+  APP_Status ret;
+  
+  /*INIT THE PROFILE FOR THIS APPLICATION*/
+  ret=APP_init_BLE_Profile(&PROFILE);
+    if(ret!=APP_SUCCESS)Error_Handler(); 
+    
+   /*CREATE SERVICE 1*/
+  COPY_VAR(SERVICE1.ServiceUUID,service_uuid1); 
+  SERVICE1.service_uuid_type=UUID_TYPE_128;
+  SERVICE1.service_type=PRIMARY_SERVICE;
+  SERVICE1.max_attr_records=7;
+
+/*ADD SERVICE 1 to PROFILE  AND SERVICE 3  TO THE PROFILE1*/
+  ret=APP_add_BLE_Service(&PROFILE, &SERVICE1);
+     if(ret!=APP_SUCCESS)Error_Handler();
+  
+  /*CREATE ATT11 & ATT12*/
+     /*ATT11*/
+   COPY_VAR(ATTR11.CharUUID,charUuidTX1);
+   ATTR11.charUuidType = UUID_TYPE_128;
+   ATTR11.charValueLen=20;
+   ATTR11.charProperties = CHAR_PROP_NOTIFY;
+   ATTR11.secPermissions = ATTR_PERMISSION_NONE;
+   ATTR11.gattEvtMask = GATT_DONT_NOTIFY_EVENTS;
+   ATTR11.encryKeySize=16;
+   ATTR11.isVariable=1;
+     /*ATT12*/
+    COPY_VAR(ATTR12.CharUUID,charUuidRX1);
+   ATTR12.charUuidType = UUID_TYPE_128;
+   ATTR12.charValueLen=20;
+   ATTR12.charProperties = CHAR_PROP_NOTIFY;
+   ATTR12.secPermissions = ATTR_PERMISSION_NONE;
+   ATTR12.gattEvtMask = GATT_DONT_NOTIFY_EVENTS;
+   ATTR12.encryKeySize=16;
+   ATTR12.isVariable=1;
+   
+   /*ASOCCIATE ATT11 and ATT12 to the SERVICE1*/
+    ret=APP_add_BLE_attr(&SERVICE1,&ATTR11);
+       if(ret!=APP_SUCCESS)Error_Handler(); 
+    ret=APP_add_BLE_attr(&SERVICE1,&ATTR12);
+       if(ret!=APP_SUCCESS)Error_Handler(); 
 }
 
 
@@ -307,7 +352,58 @@ return TEST_SUCCESS;
 
 Rtest_t chandler_module_test_central(void){
 
-  
+  /*
+  *
+  */
+
+NET_Status ret;
+APP_Status ret_init;
+    
+/*1. initialize the device*/ 
+      ret_init = APP_Init_BLE();
+    if(ret_init!=APP_SUCCESS)Error_Handler();
+    
+/*create dummy services*/
+    create_test_service();
+
+/*2. init the the network module*/
+  network_t * network_config;
+  ret = init_network(NET_CONNECTED, DEVICE_CENTRAL,0x3,&network_config);
+    if(ret != NET_SUCCESS)Error_Handler();
+
+/*the follow lines will be considered  only in case of multinode*/ 
+/* setup connection configuration for node 0, 1, 2 (optional)*/
+    uint8_t list_index [] = {0,1,2}; /*the central role will wait for three nodes*/
+/*setup special connection configuration (optional) */
+    //config_connection_t connection1 = {0x0020, 0x0010,PUBLIC_ADDR,0x0008,0x0008,0x0,0x0064, 0x0008,0x0008};/*you have to conserve this variable during all program execution*/
+    // ret = net_setup_connection_config (&connection1,list_index,sizeof(list_index));
+    //  if(ret != NET_SUCCESS)Error_Handler();
+/* setup profile configuration for node 1, 2, 3 (mandatory)*/
+      ret = net_setup_profile_definition (&PROFILE,list_index,sizeof(list_index));
+      if(ret != NET_SUCCESS)Error_Handler();
+/**slaves_addreses*/
+      /*the central node will try to start a connection with a specific devices this is optional and 
+      most  be set up in the configuration file before to be used */
+       /*specified address list */
+uint8_t slaves_addreses[] = {PUBLIC_ADDR,0x55, 0x11, 0x07, 0x01, 0x16, 0xE3,
+                             PUBLIC_ADDR,0x55, 0x11, 0x07, 0x01, 0x16, 0xE4,
+                             PUBLIC_ADDR,0x55, 0x11, 0x07, 0x01, 0x16, 0xE2};
+             app_discovery_t DV_config = {0x01 ,0x0020, 0x0020, 0x00,0x01,EXPECTED_NODES,slaves_addreses}; /*default configuration for the scan procedure*/
+              connection_handler_set_discovery_config(&DV_config);
+
+
+do{
+
+//HCI_Process();
+  NET_Status ret_net;
+  uint8_t app_error;
+            ret_net = network_process();
+            app_error = User_pherispheral_Process();
+            HCI_Packet_Release_Event_CB();
+
+
+}while(ret_net!=NET_ERROR || app_error==0)
+              
   return TEST_SUCCESS;
 }
 

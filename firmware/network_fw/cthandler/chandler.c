@@ -419,7 +419,7 @@ CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
    
     
     if(   GET_ROLE(hw_board)!= (GAP_PERIPHERAL_ROLE_IDB04A1 || GAP_BROADCASTER_ROLE_IDB04A1 || GAP_PERIPHERAL_ROLE_IDB05A1 || GAP_BROADCASTER_ROLE_IDB05A1)){
-              PRINTF("There is no possible to setup the device in adverticement mode if it is not in GAP_PERIPHERAL_ROLE or GAP_BROADCASTER_ROLE please set it in app_ble.h/n");
+              PRINTDEBUG("There is no possible to setup the device in adverticement mode if it is not in GAP_PERIPHERAL_ROLE or GAP_BROADCASTER_ROLE please set it in app_ble.h/n");
          }
     /*uses default configuration*/
       ret = aci_gap_set_discoverable(AV_default_config.adveventtype,

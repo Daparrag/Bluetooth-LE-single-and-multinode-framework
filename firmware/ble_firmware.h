@@ -20,6 +20,7 @@
 #include "stm32_bluenrg_ble.h"
 #include "ble_clock.h"
 #include "ble_status.h"
+#include "stm32f4xx_nucleo_add_led.h"
 #include <list.h>
 
 #ifndef BLE_APP_CONFIG

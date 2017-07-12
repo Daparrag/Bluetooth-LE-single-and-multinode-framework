@@ -39,10 +39,10 @@
 #define SCAN_L  		(0x0005)      		             /*!< Scan Window.  20ms*/
 #endif
 #ifndef	CONN_P1
-#define CONN_P1 		((int)((50)/1.25f))  	         /*!< Min connection interval in ms.*/
+#define CONN_P1 		((int)((20)/1.25f))  	         /*!< Min connection interval in ms.*/
 #endif
 #ifndef	CONN_P2
-#define CONN_P2			((int)((50)/1.25f))  	         /*!< Max connection interval in ms.*/
+#define CONN_P2			((int)((20)/1.25f))  	         /*!< Max connection interval in ms.*/
 #endif
 #ifndef	SUPERV_TIMEOUT
 #define SUPERV_TIMEOUT  (3200)         		         /*!< Supervision timeout.*/
@@ -67,10 +67,10 @@
 /*scan setup default parameters*/
 
 #ifndef SCAN_INTV
-#define SCAN_INTV       (0x60)                  /*<!  scanning interval  >*/
+#define SCAN_INTV       (0x28)                  /*<!  scanning interval  >*/
 #endif
 #ifndef SCAN_WIN
-#define SCAN_WIN	(0x60)                 /*<!  scanning windows  >*/
+#define SCAN_WIN	(0x28)                 /*<!  scanning windows  >*/
 #endif
 /*additional parameters for selective scanning*/
 #ifndef SCAN_TYPE

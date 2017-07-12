@@ -241,10 +241,11 @@ network.device_cstatus = device_init_config;
 void init_service_handler(void){
 	#ifdef MULTINODE
 		uint8_t i;
-		for(i=0; i < EXPECTED_NODES; i++)
+		for(i=0; i < EXPECTED_NODES; i++){
 			network.mMSConnection[i].service_status = ST_SERVICE_DISCOVERY;
                         network.mMSConnection[i].sconfig.char_disc_mode = DISC_CHAR;
                         network.mMSConnection[i].sconfig.serv_disc_mode = DISC_SERVICE; 
+                }
 
 	#else
 			network.mMSConnection.service_status = ST_SERVICE_DISCOVERY;
