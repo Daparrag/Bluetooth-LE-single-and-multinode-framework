@@ -276,7 +276,9 @@ typedef struct
   uint8_t num_device_serv_discovery;  /*<! This indicates the number of peer device(s) that had been scanned successfully their services and characteristic>*/
   dv_state_t device_cstatus;          /*<! Status of the device in this network >*/
   struct timer time_alive;            /*!< Time remaining before to consider the connection  or device(s)  lost >*/
-  #ifdef MULTINODE                    
+  #ifdef MULTINODE  
+  //uint32_t anchor_period;             /*!< store information about the anchor period in multiples of 0.625msec.>*/
+  //uint32_t max_free_slot;             /*!< store information about the maximum_available size in multiples of 0.625msec.>*/
   connection_t mMSConnection[EXPECTED_NODES]; /*<! Here one connection per peer-node management by the application >*/
   #else
   connection_t mMSConnection;         /*<! Not multinode then only a single connection is possible. >*/

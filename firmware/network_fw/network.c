@@ -450,9 +450,8 @@ connection_t * connection;
                                                         PRINTDEBUG("event_received EVT_LE_CONN_COMPLETE at time: %d \n", event->ISR_timestamp);
 							connection=NET_get_connection_by_status_CB(ST_UNESTABLISHED);
 							evt_le_connection_complete *cc =  (void*) event->evt_data;
-							ch_ret = CH_Connection_Complete_perispheral_BLE(connection,cc->handle,cc->peer_bdaddr );
-						
-							if(ch_ret != CHADLE_SUCCESS)
+							ch_ret = CH_Connection_Complete_perispheral_BLE(connection,cc->handle,cc->peer_bdaddr );                                                      
+                                                        if(ch_ret != CHADLE_SUCCESS)
 							{
 								PRINTDEBUG(" An Error occur during CH_Connection_Complete_perispheral_BLE procedure please check the parameters\n");
 								return NET_ERROR;
@@ -501,7 +500,7 @@ connection_t * connection;
 						/*execute the connection complete procedure*/
                                                 PRINTDEBUG("event_received EVT_LE_CONN_COMPLETE at time: %d \n", event->ISR_timestamp);
 						evt_le_connection_complete *cc =  (void*) event->evt_data;
-					
+
 						connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
                                                 if(connection==NULL) 
                                                 {
