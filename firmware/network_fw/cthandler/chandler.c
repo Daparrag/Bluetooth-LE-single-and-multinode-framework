@@ -8,7 +8,7 @@
 *
 * NOTE:
 * -In case of multiple connections this module is able to handler specific 
-*  requirements for each connection, allowing and efficient management of the BLE resources
+*  requirements for each connection, allowing management efficiently the BLE resources
 *  since now it is possible to stablish an specific connection parameter per an specific node.
 *
 */

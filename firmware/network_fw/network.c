@@ -8,7 +8,7 @@
 *	1. set up a connection configuration
 *   2. initialized the connection and services handlers 
 *   3. inform the handlers status to other interfaces
-*	4. receives events notification from the event_handler or application parameters (we can implement and event queue but this is so advance for this application but could be introduce an efficient resouce management)
+*	4. receives events notification from the event_handler or application parameters (we can implement and event queue but this is so advance for this application but could be introduce as and efficient resouce management)
 */
 #include <network.h>
 
@@ -274,7 +274,10 @@ void init_connection_handler(void){
 NET_Status network_process(/*event_t * event*/){
 event_t * event;
   if(network.device_cstatus!=DEVICE_READY) event = (event_t *)HCI_Get_Event_CB();
-  else  event = NULL;
+  else{
+    NET_Control_led_status_BLE();
+    return NET_SUCCESS;
+  }
 NET_Status ret;
 	switch(device_role){
 		case DEVICE_CENTRAL:
@@ -933,6 +936,65 @@ uint8_t index;
 /*setup_ service handler configuration  ok*/
 return NET_SUCCESS;
 }
+
+
+/**
+  * @brief  define a specific connection configuration  for a single  connections
+  * @param  config_connection_t * config: connection to configure
+  * @param   uint8_t  index: connection index
+  * @retval NET_Status: sucess or error code. 
+  */
+/*setup a connection configuration for an specific list of connection*/
+NET_Status net_setup_indiv_connection_config(config_connection_t * config, 
+                                             uint8_t index){
+
+/*check the input*/
+if(config==NULL){
+
+	PRINTF("input config could not be NULL \n");
+	return NET_ERROR;
+
+}
+ 
+
+#ifdef MULTINODE
+  if(index >= EXPECTED_NODES){
+	PRINTF("net_setup_connection_config: error during net_setup_connection_config: wrong imput parameters\n");
+	return NET_ERROR;
+  }
+        network.mMSConnection[index].cconfig=config;
+
+        if(network.mMSConnection[index].cconfig==NULL){
+		/*something is wrong*/
+		PRINTF("error during net_setup_connection_config: wrong  confguration setup\n");
+		return NET_ERROR;
+		}	
+
+
+#else
+        network.mMSConnection.cconfig = config;
+        
+        
+	if(network.mMSConnection.cconfig==NULL){
+		/*something is wrong*/
+		PRINTF("error during net_setup_connection_config: wrong  confguration setup\n");
+		return NET_ERROR;
+	}
+        
+
+#endif
+
+/*setup_ conection configuration  ok*/
+return NET_SUCCESS; 
+
+}
+
+
+
+
+
+
+
 
 /**
   * @brief  define a specific connection configuration  for a list of connections

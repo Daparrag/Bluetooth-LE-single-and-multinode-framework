@@ -35,6 +35,9 @@ NET_Status net_setup_connection_config(config_connection_t * config,
                                        uint8_t * list_index, 
                                       size_t list_index_size); /*<! setup a connection parameters for a specific device (in the future QoS) > */
 
+NET_Status net_setup_indiv_connection_config(config_connection_t * config, 
+                                             uint8_t index); /*<! setup a connection parameters for a specific device (in the future QoS) > */
+
 NET_Status net_setup_profile_definition(app_profile_t * profile_def, 
 					uint8_t * list_index, 
 				        size_t list_index_size); /*<! Used by the application to indicate a specific profiles to one or set of connection(s) (in the future QoS)>*/
