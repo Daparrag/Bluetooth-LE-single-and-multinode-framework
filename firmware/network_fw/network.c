@@ -67,7 +67,6 @@ if(led_toggle_count++ > LED_TOGGLE_INTERMIDLE)
 	}
 }
 
-
 /**
   * @brief  This function is used for indicate the connection_unestablished state.
   * @param void.
@@ -290,6 +289,7 @@ NET_Status ret;
 		case DEVICE_PERISPHERAL:
 		{
 			ret = network_process_conn_oriented(event);
+                         if(ret != NET_SUCCESS) while(1);
 		}
 		break;
 
@@ -505,7 +505,7 @@ connection_t * connection;
 						evt_le_connection_complete *cc =  (void*) event->evt_data;
 
 						connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
-                                                if(connection==NULL) 
+                                                if(connection==NULL || connection->connection_status==ST_CONNECTED_WAIT_DISC) 
                                                 {
                                                   /*this is not and interesting address for us since this device has not part of the network*/
                                                   //network_clean_wait_end_procedure();
@@ -1217,3 +1217,26 @@ uint8_t NET_get_num_connections(void)
 	return n_connections;
 
 }
+
+uint16_t NET_get_connection_handler(uint8_t nd_index)
+{
+  
+  uint8_t n_connections;
+  uint16_t Chandler;
+  
+  n_connections = NET_get_num_connections();
+
+#ifdef MULTINODE 
+  if (nd_index >= n_connections)
+  {
+    return 0;
+  }
+  
+   Chandler = network.mMSConnection[nd_index].Connection_Handle; 
+#else
+     Chandler = network.mMSConnection.Connection_Handle; 
+#endif     
+  return Chandler;
+}
+
+
