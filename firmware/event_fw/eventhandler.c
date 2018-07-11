@@ -128,7 +128,7 @@ void HCI_add_Event_CB(struct event_entry * entry){
 
 
 /**
-  * @brief event handler whitout queue.
+  * @brief event handler without queue.
   * @param void *pckt: pointer to an input packet
   * @retval none . 
   */
@@ -236,7 +236,7 @@ int HCI__Event_verify_CB(const tHciDataPacket_enhnalce * hciReadPacket)
 void HCI_Isr_Event_Handler__CB(){
   /*Here had been modified the HCI_Isr method to allows:
   *
-  *1. timestamp for all imput packages.
+  *1. time-stamp for all input packages.
   *2. allocate the input packets into the packet queue with priorities.
   *
   */
@@ -292,7 +292,7 @@ void HCI_Isr_Event_Handler__CB(){
 void HCI_Packet_Release__Event_CB(){
 /*Here had been modified the HCI_Isr method to allows:
   *
-  *1. timestamp for all imput packages.
+  *1. time-stamp for all input packages.
   *2. allocate the input packets into the packet queue with priorities.
   *
   */
@@ -305,7 +305,7 @@ void HCI_Packet_Release__Event_CB(){
    while(BlueNRG_DataPresent()){ 
       if(list_is_empty (&hciReadPktPool) == FALSE){
 
-         /* enqueueing a packet for read */
+         /* enqueuering a packet for read */
         list_remove_head (&hciReadPktPool, (tListNode **)&hciReadPacket);
         data_len = BlueNRG_SPI_Read_All(hciReadPacket->dataBuff, HCI_READ_PACKET_SIZE);
         if(data_len > 0){
@@ -365,7 +365,7 @@ void * HCI_Get__Event_CB(){
 
           case EVT_DISCONN_COMPLETE:
           {
-                  /*stil is not defined*/
+                  /*still is not defined*/
                   while(1);
       
           }

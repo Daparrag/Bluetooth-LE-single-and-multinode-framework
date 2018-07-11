@@ -3,6 +3,8 @@
 #ifndef NET_BLE_H
 #define NET_BLE_H
 
+
+
 #ifdef BLE_APP_CONFIG
 #include "blefw_conf.h" 
 #endif
@@ -32,11 +34,8 @@ NET_Status init_network(net_type_t net_type, dv_type_t device_type ,uint8_t N_re
 NET_Status network_process(/*event_t * event*/);/*<! main network function: running the connection handler and the services handler >*/
 
 NET_Status net_setup_connection_config(config_connection_t * config, 
-                                       uint8_t * list_index, 
-                                      size_t list_index_size); /*<! setup a connection parameters for a specific device (in the future QoS) > */
-
-NET_Status net_setup_indiv_connection_config(config_connection_t * config, 
-                                             uint8_t index); /*<! setup a connection parameters for a specific device (in the future QoS) > */
+					uint8_t * list_index, 
+                                        size_t list_index_size); /*<! setup a connection parameters for a specific device (in the future QoS) > */
 
 NET_Status net_setup_profile_definition(app_profile_t * profile_def, 
 					uint8_t * list_index, 
@@ -57,5 +56,17 @@ void NET_get_service_and_attributes_by_chandler_BLE(uint16_t chandler, uint16_t 
 
 uint8_t network_get_status(void);
 
+dv_type_t NET_get_device_role(void);
+
 uint8_t NET_get_num_connections(void);/*<! return the number of connections>*/
+
+uint8_t NET_valiadate_chandler(uint16_t chandler); /*<! validate an specific connection handler >*/
+
+uint16_t NET_get_chandler_by_index (uint8_t _index); /*<! return the connection handler based on a predetermined connection index>*/
+
+uint8_t NET_get_conn_index_by_chandler(uint16_t conn_handler, uint8_t * idx); /*<! return idx associated to the connection characterized by the conn_handler>*/
+
+void NET_get_conn_link_status(uint8_t link_status[8], uint16_t conn_handler[8]); /*<!returns the link status and the connection handler in order > */ 
+
+void NET_get_all_connections( connection_t * conn []); /*<!returns return pointer to all connections associated to the network > */ 
 #endif /*NET_BLE_H*/

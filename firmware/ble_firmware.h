@@ -16,10 +16,13 @@
 #include "hci_le.h"
 #include "hal.h"
 #include "sm.h"
+//#include "uart_support.h"
 #include "stm32_bluenrg_ble.h"
 #include "ble_clock.h"
 #include "ble_status.h"
+#ifdef DEBUG
 #include "stm32f4xx_nucleo_add_led.h"
+#endif
 #include <list.h>
 
 #ifndef BLE_APP_CONFIG
@@ -171,7 +174,8 @@ typedef enum{
 
 typedef enum service_State{
   ST_SERVICE_DISCOVERY,							/*!< Device looking for services >*/
-  ST_CHAR_DISCOVERY					      /*!< Device looking for characteristics >*/
+  ST_CHAR_DISCOVERY,					      /*!< Device looking for characteristics >*/
+  ST_DISC_COMPLETED  
 }sv_state_t;
 
 

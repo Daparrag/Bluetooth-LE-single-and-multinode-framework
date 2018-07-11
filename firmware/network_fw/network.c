@@ -8,9 +8,12 @@
 *	1. set up a connection configuration
 *   2. initialized the connection and services handlers 
 *   3. inform the handlers status to other interfaces
-*	4. receives events notification from the event_handler or application parameters (we can implement and event queue but this is so advance for this application but could be introduce as and efficient resouce management)
+*	4. receives events notification from the event_handler or application parameters (we can implement and event queue but this is so advance for this application but could be introduce an efficient resouce management)
 */
 #include <network.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "debug_multnodeFW.h"
 
 /****************** Variable Declaration **************************/
 net_type_t    net_mode =  NET_CONNECTED;/*the default connection mode*/
@@ -40,6 +43,8 @@ static connection_t * NET_Get_currentConnection_CB(void); /* retreave the curren
 
 static connection_t * NET_get_connection_by_address_BLE(uint8_t * addrss); /* retreave a connection characterized by and specific address */
 
+static void net_copy_deep_profile(app_profile_t * Profile_source, app_profile_t * Profile_dest ); /*this performs the deep copy trough two diferent profiles*/
+
 
 
 
@@ -66,6 +71,7 @@ if(led_toggle_count++ > LED_TOGGLE_INTERMIDLE)
 		BSP_LED_Toggle(LED2);
 	}
 }
+
 
 /**
   * @brief  This function is used for indicate the connection_unestablished state.
@@ -156,7 +162,72 @@ uint8_t network_get_status(void){
         return 0;
 }
 
-   
+
+/**
+  * @brief  This function implements the deep copy between two profiles.
+  * @param app_profile_t * Profile_source: profile to be copied.
+  * @param app_profile_t * Profile_dest:  destination profile structure where the profile is copied.
+  * @retval void.
+  */
+void net_copy_deep_profile(app_profile_t * Profile_source, app_profile_t * Profile_dest )
+{
+  uint8_t i;
+  uint8_t nserv =  Profile_source->n_service;
+  app_service_t ** tmp_dest_serv;
+  app_attr_t ** temp_dest_attr;
+      
+  app_service_t * tmp_src_serv;
+  app_attr_t * temp_src_attr;
+  
+  Profile_dest->n_service=Profile_source->n_service;
+  Profile_dest->svflags= Profile_source->svflags;
+  
+  
+  tmp_dest_serv = &(Profile_dest->services);
+  tmp_src_serv = Profile_source->services;
+
+  for (i=0; i< nserv; i++)
+  {
+    uint8_t k;
+       *tmp_dest_serv = malloc(sizeof(app_service_t));
+      (*tmp_dest_serv)->chrflags = tmp_src_serv->chrflags;
+      COPY_VAR((*tmp_dest_serv)->ServiceUUID,tmp_src_serv->ServiceUUID);
+      (*tmp_dest_serv)->ServiceHandle =     tmp_src_serv->ServiceHandle;
+      (*tmp_dest_serv)->service_uuid_type = tmp_src_serv->service_uuid_type;
+      (*tmp_dest_serv)->max_attr_records =  tmp_src_serv->max_attr_records;
+      (*tmp_dest_serv)->n_attr =            tmp_src_serv->n_attr;
+      (*tmp_dest_serv)->next_service=NULL;
+    
+      temp_src_attr =  tmp_src_serv->attrs;
+      temp_dest_attr = &((*tmp_dest_serv)->attrs);
+
+      for (k=0;k < tmp_src_serv->n_attr; k++)
+      {
+        *temp_dest_attr = malloc(sizeof(app_attr_t));
+        COPY_VAR((*temp_dest_attr)->CharUUID,temp_src_attr->CharUUID);
+        (*temp_dest_attr)->charUuidType =          temp_src_attr->charUuidType;
+        (*temp_dest_attr)->charValueLen =          temp_src_attr->charValueLen;
+        (*temp_dest_attr)->charProperties =        temp_src_attr->charProperties;
+        (*temp_dest_attr)->secPermissions =        temp_src_attr->secPermissions;
+        (*temp_dest_attr)->gattEvtMask =           temp_src_attr->gattEvtMask;
+        (*temp_dest_attr)->isVariable =            temp_src_attr->isVariable;
+        (*temp_dest_attr)->CharHandle =            temp_src_attr->CharHandle;
+        (*temp_dest_attr)->Associate_CharHandler = temp_src_attr->Associate_CharHandler;
+        (*temp_dest_attr)->n_val =                 temp_src_attr->n_val;          
+        (*temp_dest_attr)->next_attr=NULL;
+        
+        temp_dest_attr=&((*temp_dest_attr)->next_attr);
+        temp_src_attr=temp_src_attr->next_attr;
+      }
+
+
+      tmp_dest_serv = &((*tmp_dest_serv)->next_service);
+      tmp_src_serv = tmp_src_serv->next_service;  
+  }
+
+}
+
+
 
 /**
   * @brief  This function Initialize the network module.
@@ -273,10 +344,7 @@ void init_connection_handler(void){
 NET_Status network_process(/*event_t * event*/){
 event_t * event;
   if(network.device_cstatus!=DEVICE_READY) event = (event_t *)HCI_Get_Event_CB();
-  else{
-    NET_Control_led_status_BLE();
-    return NET_SUCCESS;
-  }
+  else  event = NULL;
 NET_Status ret;
 	switch(device_role){
 		case DEVICE_CENTRAL:
@@ -289,7 +357,6 @@ NET_Status ret;
 		case DEVICE_PERISPHERAL:
 		{
 			ret = network_process_conn_oriented(event);
-                         if(ret != NET_SUCCESS) while(1);
 		}
 		break;
 
@@ -341,7 +408,7 @@ void NET_Control_led_status_BLE(void){
   * @param  event_t * event: specific event
   * @retval NET_Status: Value indicating success or error code
   */
-NET_Status network_process_conn_oriented(event_t * event){/*we have to deal with the events maybe wr cant catch witout passing parameters*/
+NET_Status network_process_conn_oriented(event_t * event){/*we have to deal with the events; Maybe we can't catch without passing parameters*/
 
 CHADLE_Status ch_ret;
 SERV_Status   serv_ret;
@@ -419,13 +486,13 @@ connection_t * connection;
 				}else if(network_get_wait_end_procedure()==1)
                                 {
                                   if(Timer_Expired(&network.time_alive)){
-                                    PRINTDEBUG("The device was not able to identify any perispheral:\n");
+                                    PRINTDEBUG("The device was not able to identify any peripheral:\n");
                                     
                                     if(network.num_device_found!=0){
-                                      PRINTDEBUG("the device will try to set up a connection with %d pherispherals\n",network.num_device_found);
+                                      PRINTDEBUG("the device will try to set up a connection with %d peripherals\n",network.num_device_found);
                                       network.device_cstatus=DEVICE_READY_TO_CONNECT;
                                     }else{
-                                      PRINTDEBUG("the device will restart the scanning of perispherals\n");
+                                      PRINTDEBUG("the device will restart the scanning of peripherals\n");
                                       Timer_Set(&network.time_alive, CLOCK_SECOND * 36);
                                       network_set_wait_end_procedure();
                                       return NET_SUCCESS;
@@ -482,7 +549,7 @@ connection_t * connection;
 				
 					if(ch_ret!=CHADLE_SUCCESS)
 					{
-						PRINTDEBUG(" An Error occur during the adverticement setup procedure please check the parameters\n");
+						PRINTDEBUG(" An Error occur during the advertisement setup procedure please check the parameters\n");
 						return NET_ERROR;
 					
 					}
@@ -505,7 +572,7 @@ connection_t * connection;
 						evt_le_connection_complete *cc =  (void*) event->evt_data;
 
 						connection = NET_get_connection_by_address_BLE(cc->peer_bdaddr);/*issue*/
-                                                if(connection==NULL || connection->connection_status==ST_CONNECTED_WAIT_DISC) 
+                                                if(connection==NULL) 
                                                 {
                                                   /*this is not and interesting address for us since this device has not part of the network*/
                                                   //network_clean_wait_end_procedure();
@@ -539,15 +606,15 @@ connection_t * connection;
 				connection=NET_get_connection_by_status_CB(ST_CREATE_CONNECTION);
                                 if(connection==NULL)
                                 {
-                                  /*that means that the coonection state has been completed*/
+                                  /*that means that the connection state has been completed*/
                                   if(network.num_device_connected <= 0 && reconnection_tries > 0)
                                   {
-                                    PRINTDEBUG(" Was imposible to connect with any device \n");
+                                    PRINTDEBUG(" Was impossible to connect with any device \n");
                                     PRINTDEBUG(" Now the device will start the reconnection procedure \n");
                                     
                                   }else if(network.num_device_connected < network.num_device_found && reconnection_tries > 0)
                                   {
-                                    PRINTDEBUG(" Was imposible to connect with %d devices \n", (network.num_device_found - network.num_device_connected));
+                                    PRINTDEBUG(" Was impossible to connect with %d devices \n", (network.num_device_found - network.num_device_connected));
                                     PRINTDEBUG(" Now the device will start the reconnection procedure \n");
                                   }else if(network.num_device_connected == network.num_device_found)
                                   {
@@ -560,7 +627,7 @@ connection_t * connection;
                                    
                                     if(reconnection_tries<=0)
                                     {
-                                      /*check it that there is at least one perispheral connected*/
+                                      /*check it that there is at least one peripheral connected*/
                                       if(network.num_device_connected > 0)
                                       {
                                         network.device_cstatus = DEVICE_READY_TO_INTERCHANGE;
@@ -569,12 +636,12 @@ connection_t * connection;
                                           connection = NET_get_connection_by_status_CB(ST_TIME_OUT);
                                           if(connection!=NULL) connection->connection_status = ST_CONNECTION_LOST;   
                                         }while(connection!=NULL);
-                                        PRINTDEBUG(" Was imposible to connect with %d devices \n", (network.num_device_found - network.num_device_connected));
+                                        PRINTDEBUG(" Was impossible to connect with %d devices \n", (network.num_device_found - network.num_device_connected));
                                         PRINTDEBUG(" Now the device will start the service_discovery_procedure \n");
                                         network.flags.connection_stablishment_complete=1;
                                         return NET_SUCCESS;
                                       }
-                                      PRINTDEBUG(" Was imposible to connect with any device \n");
+                                      PRINTDEBUG(" Was impossible to connect with any device \n");
                                       return NET_ERROR;
                                     }
                                     
@@ -614,7 +681,7 @@ connection_t * connection;
 		
 		}
 		break;
-		case DEVICE_READY_TO_INTERCHANGE:
+                case DEVICE_READY_TO_INTERCHANGE:
 		{
 			if(event!=NULL)
 			{
@@ -638,8 +705,16 @@ connection_t * connection;
 							PRINTDEBUG("An Error occur in the interchange process because an invalid connection handler has been received please check it. \n");
 							return NET_ERROR;
 						}
-						
+                                                
+                                                if(connection->Node_profile->svflags.services_to_find==0 && connection->service_status==ST_SERVICE_DISCOVERY)
+                                                {
+                                                    connection->Node_profile->svflags.services_success_scanned=1;  
+                                                      connection->service_status = ST_CHAR_DISCOVERY;
+                                                      //network_clean_wait_end_procedure();
+                                                }
+                                                //if(connection->service_status != ST_CHAR_DISCOVERY)
 						network_clean_wait_end_procedure(); 
+                                                return NET_SUCCESS;
 						
 					}
 					break;
@@ -655,13 +730,25 @@ connection_t * connection;
                                              }
                                              serv_ret = SH_Associate_att_handler_CB(connection,resp->attr_handle);
                                              
-                                             //network_clean_wait_end_procedure();
-                                             
+                                             app_service_t * tmp_serv= connection->Node_profile->services;
+                                             while(tmp_serv!=NULL && tmp_serv->chrflags.char_discovery_success!=0)
+                                             {
+                                             	tmp_serv= tmp_serv->next_service;
+                                             }
+
+
+                                             if(tmp_serv==NULL){
+                                             	network.num_device_serv_discovery+=1;
+                                                connection->Node_profile->svflags.attr_success_scanned=1;
+                                                connection->service_status=ST_DISC_COMPLETED;
+                                                connection->connection_status=ST_STABLISHED;
+                                             }
+                                             	//network_clean_wait_end_procedure();
                                         }
                                         break;
                                         case EVT_BLUE_ATT_FIND_BY_TYPE_VAL_RESP:
                                         {
-                                          PRINTDEBUG("event_received EVT_BLUE_ATT_FIND_BY_TYPE_VAL_RESP at time: %d (ms)\n", event->ISR_timestamp);
+
                                         }
                                         break;
                                         default:
@@ -700,8 +787,13 @@ connection_t * connection;
                                                   
                                                 }else if(connection->sconfig.serv_disc_mode == DONT_FIND_SERVICE){
                                                   /*This is used in case in which the devices is only a server*/
-                                                  connection->Node_profile->svflags.services_success_scanned=1;
-                                                  connection->service_status = ST_CHAR_DISCOVERY;
+                                                  connection->Node_profile->svflags.services_to_find-=1;
+                                                  if(connection->Node_profile->svflags.services_to_find==0)
+                                                  {
+                                                  	connection->Node_profile->svflags.services_success_scanned=1;
+                                                  	connection->service_status = ST_CHAR_DISCOVERY;
+
+                                                  }
                                                   return NET_SUCCESS;
                                                 }
 						
@@ -710,27 +802,39 @@ connection_t * connection;
 							PRINTDEBUG(" error occur during the discovery services procedure DSCV_primary_services_by_uuid please check it \n");
 							return NET_ERROR;
 						}
-						
-						if(connection->Node_profile->svflags.services_success_scanned==1)
-						{
-							connection->service_status = ST_CHAR_DISCOVERY;
-							return NET_SUCCESS;
-						}
-						
+                       
 						network_set_wait_end_procedure();
 					}
 					break;
 					
 					case ST_CHAR_DISCOVERY:
 					{
-                                          
-                                              /*idealy this  has to be by connection not as a general flag configuration*/  
+
+
+                    /*idealy this  has to be by connection not as a general flag configuration*/  
                                               if(connection->sconfig.char_disc_mode==FIND_SPE_CHAR){
                                                   serv_ret = DSCV_primary_char_by_uuid(connection);
                                                   
                                               }else if (connection->sconfig.char_disc_mode==DONT_FIND_CHAR){
-                                                connection->Node_profile->svflags.attr_success_scanned=1;
-                                                serv_ret=SERV_SUCCESS;
+                                                  /*get the service*/
+                                              		app_service_t * service = connection->Node_profile->services;
+                                              		while(service!=NULL && service->chrflags.char_discovery_success!=0){
+                                              			service=service->next_service;
+                                              		}
+                                              		if(service==NULL){
+                                              			connection->Node_profile->svflags.attr_success_scanned=1;
+                                              			network.num_device_serv_discovery+=1;
+                                                                connection->service_status=ST_DISC_COMPLETED;
+                                                                connection->connection_status=ST_STABLISHED;
+                                              		}else{
+                                              			service->chrflags.char_scanned+=1;
+                                              			if(service->chrflags.char_scanned==service->chrflags.char_to_scan)
+                                              			{
+                                              				service->chrflags.char_discovery_success=1;
+                                              			}
+                                              		}
+
+                                                return NET_SUCCESS;
                                               }
 						
 						if(serv_ret!=SERV_SUCCESS)
@@ -738,33 +842,17 @@ connection_t * connection;
 							PRINTDEBUG(" error occur during the discovery characterictics procedure DSCV_primary_char_by_uuid please check it \n");
 							return NET_ERROR;
 						}
-						
-						if((connection->Node_profile->svflags.attr_success_scanned==1) 
-							&& (connection->Node_profile->svflags.services_success_scanned!=1))
-						{
-							/*this status is not possible something is wrong*/
-							PRINTDEBUG(" Error, It is not possible to scan atributes witout first finish the scanning services please check it\n");
-							return NET_ERROR;
-                                                        
-						}else if((connection->Node_profile->svflags.attr_success_scanned==1) 
-								 && (connection->Node_profile->svflags.services_success_scanned==1))
-						{
-							network.num_device_serv_discovery+=1;
-							connection->connection_status = ST_STABLISHED;    
-							reset_profile_flags(connection->Node_profile);
-                                                        return NET_SUCCESS;
-						}
-						
+
 						network_set_wait_end_procedure();
 					}
 					break;
-                                default:
-                                break;  	
+                    default:
+                    break;  	
 				}
 			}
 		}
 		break;
-		case DEVICE_READY:
+                case DEVICE_READY:
 		{       
 
                                        
@@ -789,14 +877,14 @@ void reset_profile_flags(app_profile_t * profile){
   
   nservices=profile->n_service;
   profile->svflags.attr_success_scanned=0;
-  profile->svflags.services_success_scanned=0;
+  //profile->svflags.services_success_scanned=0;
   profile->svflags.services_to_find = nservices;
   
   service = profile->services;
   
   for(i=0;i < nservices; i++){
     if(service==NULL) break;
-        service->chrflags.char_discovery_success=0;
+        //service->chrflags.char_discovery_success=0;
         service->chrflags.char_scanned=0;
         service = service->next_service;
   }  
@@ -874,10 +962,13 @@ if(list_index_size-1 >= EXPECTED_NODES || list_index== NULL){
 	return NET_ERROR;
 }
 
-for(i=0; i < list_index_size; i++){
-	index = *list_index++;
-        network.mMSConnection[index].Node_profile=profile_def;
+index = *list_index++;
+network.mMSConnection[index].Node_profile=profile_def;
 
+for(i=0; i < list_index_size-1; i++){
+	index = *list_index++;
+        network.mMSConnection[index].Node_profile = malloc(sizeof(app_profile_t));
+        net_copy_deep_profile(profile_def,network.mMSConnection[index].Node_profile);
 	if(network.mMSConnection[index].Node_profile==NULL){
 		/*something is wrong*/
 		PRINTF("error during net_setup_profile_definition: wrong  confguration setup\n");
@@ -936,65 +1027,6 @@ uint8_t index;
 /*setup_ service handler configuration  ok*/
 return NET_SUCCESS;
 }
-
-
-/**
-  * @brief  define a specific connection configuration  for a single  connections
-  * @param  config_connection_t * config: connection to configure
-  * @param   uint8_t  index: connection index
-  * @retval NET_Status: sucess or error code. 
-  */
-/*setup a connection configuration for an specific list of connection*/
-NET_Status net_setup_indiv_connection_config(config_connection_t * config, 
-                                             uint8_t index){
-
-/*check the input*/
-if(config==NULL){
-
-	PRINTF("input config could not be NULL \n");
-	return NET_ERROR;
-
-}
- 
-
-#ifdef MULTINODE
-  if(index >= EXPECTED_NODES){
-	PRINTF("net_setup_connection_config: error during net_setup_connection_config: wrong imput parameters\n");
-	return NET_ERROR;
-  }
-        network.mMSConnection[index].cconfig=config;
-
-        if(network.mMSConnection[index].cconfig==NULL){
-		/*something is wrong*/
-		PRINTF("error during net_setup_connection_config: wrong  confguration setup\n");
-		return NET_ERROR;
-		}	
-
-
-#else
-        network.mMSConnection.cconfig = config;
-        
-        
-	if(network.mMSConnection.cconfig==NULL){
-		/*something is wrong*/
-		PRINTF("error during net_setup_connection_config: wrong  confguration setup\n");
-		return NET_ERROR;
-	}
-        
-
-#endif
-
-/*setup_ conection configuration  ok*/
-return NET_SUCCESS; 
-
-}
-
-
-
-
-
-
-
 
 /**
   * @brief  define a specific connection configuration  for a list of connections
@@ -1218,25 +1250,124 @@ uint8_t NET_get_num_connections(void)
 
 }
 
-uint16_t NET_get_connection_handler(uint8_t nd_index)
-{
-  
-  uint8_t n_connections;
-  uint16_t Chandler;
-  
-  n_connections = NET_get_num_connections();
 
-#ifdef MULTINODE 
-  if (nd_index >= n_connections)
-  {
-    return 0;
-  }
-  
-   Chandler = network.mMSConnection[nd_index].Connection_Handle; 
+uint16_t NET_get_chandler_by_index(uint8_t _index){
+	uint16_t r_chandler;
+
+	if(_index > EXPECTED_NODES ) return 0;
+#ifdef MULTINODE
+		r_chandler = network.mMSConnection[_index].Connection_Handle;
 #else
-     Chandler = network.mMSConnection.Connection_Handle; 
-#endif     
-  return Chandler;
+		r_chandler = network.mMSConnection.Connection_Handle;
+#endif
+		return r_chandler;
 }
 
 
+
+
+/**
+  * @brief  this fuction validates of the connection handler correspound to some 
+  * connection already stablished 
+  * @param  uint16_t chandler: connection handler used for search a conneciton 
+  * @retval (1) if the chandler correspound to some connection otherwise (0) 
+  */
+
+uint8_t NET_valiadate_chandler(uint16_t _chandler)
+{
+ 
+  uint8_t ret=FALSE;
+  uint8_t n_connections;
+  
+  n_connections = network.num_device_connected;
+
+#ifdef MULTINODE
+uint8_t i;
+
+  for(i=0; i<n_connections; i++)
+  {
+    if (network.mMSConnection[i].Connection_Handle == _chandler)
+        return (ret=TRUE);
+  }
+#else
+  if (network.mMSConnection.Connection_Handle == _chandler)
+      ret = TRUE;
+#endif  
+ return ret; 
+}
+
+/**
+  * @brief  this fuction returns the index associated to a conn_handler  
+  * @param  uint16_t conn_handler: connection handler paramiter
+  * @param  uint8_t * idx: pointer to a idx variable
+  * @retval dv_type_t role of the device 
+  */
+dv_type_t NET_get_device_role(void)
+{
+  return  device_role;
+}
+
+
+
+/**
+  * @brief  this fuction returns the index associated to a conn_handler  
+  * @param  uint16_t conn_handler: connection handler paramiter
+  * @param  uint8_t * idx: pointer to a idx variable
+  * @retval uint8_t ret : 0 if the connection handler is not associated to any connection otherwise 1 
+  */
+uint8_t NET_get_conn_index_by_chandler(uint16_t conn_handler, uint8_t * idx)
+{
+      uint8_t ret=0;
+      
+#ifdef MULTINODE
+      uint8_t i;
+      uint8_t n_connections = network.num_device_connected;
+      
+      for(i=0; i<n_connections; i++)
+      {
+        if (network.mMSConnection[i].Connection_Handle == conn_handler)
+        {
+           *idx = i;
+            ret = 1;
+        }
+      }
+#else
+      if (network.mMSConnection.Connection_Handle == conn_handler){
+          *idx = 0;
+           ret = 1;
+      }
+#endif 
+      
+  return ret;    
+}
+
+/**
+  * @brief  this fuction returns the link status per connection  
+  * @param  uint8_t link_status [8]: used to retrieve the link status per connection 
+  * @param  uint16_t conn_handler[8]:connection handler associated to each connection
+  * @retval none.
+  */
+void NET_get_conn_link_status(uint8_t link_status[8], uint16_t conn_handler[8]){
+
+  aci_hal_get_link_status(link_status,conn_handler);
+
+}
+
+
+/**
+  * @brief link return all the connections associated to the network  
+  * @param  uint8_t link_status [8]: used to retrieve the link status per connection 
+  * @param  uint16_t conn_handler[8]:connection handler associated to each connection
+  * @retval none.
+  */
+void NET_get_all_connections( connection_t * conn [] ){
+#if defined(MULTINODE)
+  uint8_t i; 
+  uint8_t ndevices = NET_get_num_connections();
+  
+  for (i=0; i < ndevices; i++)
+    (conn)[i]= &network.mMSConnection[i];
+#else
+    (conn)[0]=&network.mMSConnection;
+#endif    
+}

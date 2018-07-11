@@ -1,25 +1,34 @@
 #ifndef _BLEFW_CONFIG_H_
 #define _BLEFW_CONFIG_H_
 
-#ifndef BLE_APP_CONFIG
-#define BLE_APP_CONFIG 
-#endif
 
  
 #define ROLE    GAP_CENTRAL_ROLE			/*!< Here is where is defined  the role for this device >*/
 
-#define MAX_CHAR_ALLOWED                                /*!< This is a reference to the maximum number of characterisitic associated to a service that the client will discover >*/
-
 #define MULTINODE					/*!< Used only if your device support multinode connections and if it is requiered for your application >*/
 
-
 #ifdef MULTINODE            				/*define MULTINODE for allows multinode network configuration */        
-#define EXPECTED_NODES 3
+#define EXPECTED_NODES 2
 #define EXPECTED_CENTRAL_NODES 1					
 #else
 #define EXPECTED_NODES 1
 #define EXPECTED_CENTRAL_NODES 1 
 #endif
+
+/*****************SIMPLE_MACROS*****************************/
+#ifndef MIN
+#define MIN(a,b)            ((a) < (b) )? (a) : (b)
+#endif
+
+#ifndef MAX
+#define MAX(a,b)            ((a) > (b) )? (a) : (b)
+#endif
+
+
+/*************************HARDWARE MACROS*****************************/
+/*Local_Macros*/
+#define MAY_HAVE_IDB0xA1(arch, func_name) ((arch) == 1 ?func_name##_IDB05A1:func_name##_IDB04A1)/*concatenation of the funtion name and the architecture*/
+#define BLE_ARCH_MASK 1 /*used for reconize if we have a IDB04A1 or IDB05A1 architecture  BLE_ARCH_MASK is = #architectures -1 */
 
 
 /*address setup defaut parameters*/
@@ -62,17 +71,17 @@
 #define FIND_SPE_SERVICE  				0x01			/*!< Used for enable specific service(s) discovery (services characterized by specific UUID) >*/
 #define FIND_GEN_SERVICE  				0x02			/*!< Used for discovery any service on the peer device(s) >*/
 
-#define DONT_FIND_CHAR					0x01			/*!< Used for disable the attribute(s) discovery in the device>*/
-#define FIND_SPE_CHAR  					0x02			/*!< Used for enable specific attribute(s) discovery (attribute(s) characterized by specific UUID) >*/
-#define FIND_GEN_CHAR  					0x04			/*!< Used for discovery any attribute(s) on the peer device(s) >*/
+#define DONT_FIND_CHAR					0x00			/*!< Used for disable the attribute(s) discovery in the device>*/
+#define FIND_SPE_CHAR  					0x01			/*!< Used for enable specific attribute(s) discovery (attribute(s) characterized by specific UUID) >*/
+#define FIND_GEN_CHAR  					0x02			/*!< Used for discovery any attribute(s) on the peer device(s) >*/
 
 #ifndef DISC_SERVICE
-#define DISC_SERVICE					DONT_FIND_SERVICE	/*!< Use one of the follow: DONT_FIND_SERVICE, FIND_SPE_SERVICE, FIND_GEN_SERVICE >*/
+#define DISC_SERVICE					FIND_SPE_SERVICE	/*!< Use one of the follow: DONT_FIND_SERVICE, FIND_SPE_SERVICE, FIND_GEN_SERVICE >*/
 #endif
 
 
 #ifndef DISC_CHAR
-#define DISC_CHAR	        			DONT_FIND_CHAR		/*!< Use one of the follow: DONT_FIND_CHAR, FIND_SPE_CHAR, FIND_GEN_CHAR >*/
+#define DISC_CHAR	        			FIND_SPE_CHAR		/*!< Use one of the follow: DONT_FIND_CHAR, FIND_SPE_CHAR, FIND_GEN_CHAR >*/
 #endif
 
 /********************GENERAL_ADVERTISEMENT DEFAULT CONFIGURATION *************/
@@ -80,23 +89,23 @@
 #define ADV_EVT_TYPE  					ADV_IND               /*<!  advertisement event type   >*/
 #define ADV_IT_MIN    					(0x0040)              /*<!  advertisement interval min >*/
 #define ADV_IT_MAX    					(0x0040)              /*<!  advertisement interval max  >*/
-#define ADV_ADDR_TYPE 				        PUBLIC_ADDR           	  /*<!  advertisement address type  >*/
-#define ADV_POLICY  		                         NO_WHITE_LIST_USE       		  /*<!  advertisement policy  >*/
+#define ADV_ADDR_TYPE 				    PUBLIC_ADDR           	  /*<!  advertisement address type  >*/
+#define ADV_POLICY  		            NO_WHITE_LIST_USE       		  /*<!  advertisement policy  >*/
 #define SLAVE_INT_MIN   				(0x0020)           	  /*<!  slave connection interval min >*/
 #define SLAVE_INT_MAX   				(0x0020)              /*<!  slave connection interval max  >*/
 /********************CONNECTION_SETUP DEFAULT CONFIGURATION *************/
 
-#define SCAN_P  						(0x0005)      		  /*!< Scan Interval 40ms. >*/			
-#define SCAN_L  						(0x0005)      		  /*!< Scan Window.  20ms  >*/
-#define CONN_P1 			 ((int)((50)/1.25f))  	          /*!< Min connection interval in ms. >*/
-#define CONN_P2				 ((int)((50)/1.25f))  	          /*!< Max connection interval in ms. >*/
+#define SCAN_P  						(0x0050)      		  /*!< Scan Interval 40ms. >*/			
+#define SCAN_L  						(0x0050)      		  /*!< Scan Window.  20ms  >*/
+#define CONN_P1 			 ((int)((20)/1.25f))  	          /*!< Min connection interval in ms. >*/
+#define CONN_P2				 ((int)((20)/1.25f))  	          /*!< Max connection interval in ms. >*/
 #define SUPERV_TIMEOUT  				  (3200)         	  /*!<  Supervision timeout.   >*/
-#define CONN_L1         	((int)((12)/0.625f))   	   		  /*!<  Min connection length. >*/
-#define CONN_L2         	((int)((12)/0.625f))   	   		  /*!<  Min connection length. >*/
+#define CONN_L1         	((int)((8)/0.625f))   	   		  /*!<  Min connection length. >*/
+#define CONN_L2         	((int)((8)/0.625f))   	   		  /*!<  Max connection length. >*/
 #define LATENCY								 (0)
 /********************SCAN_SETUP DEFAULT CONFIGURATION *************/
 #define SCAN_INTV       				  (0x60)
-#define SCAN_WIN	  					  (0x60)
+#define SCAN_WIN	  			          (0x60)
 #define SCAN_TYPE       				  (0x01)
 
 

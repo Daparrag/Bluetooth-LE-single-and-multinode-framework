@@ -1,18 +1,19 @@
 /*connection handler 
 * version 1.0
 * task:
-* -Connection stablishment single or multiple connections  
+* -Connection establishment single or multiple connections
 *  according to the network topology.
 *
 *- Management the broadcast transmissions in case of broadcast or observer roles.
 *
 * NOTE:
 * -In case of multiple connections this module is able to handler specific 
-*  requirements for each connection, allowing management efficiently the BLE resources
-*  since now it is possible to stablish an specific connection parameter per an specific node.
+*  requirements for each connection. Therefore it allows an efficient management of the BLE resources
+*  because from now it is possible to establish an specific connection parameter into specific nodes.
 *
 */
 #include <chandler.h>
+#include "debug_multnodeFW.h"
 
 
 #define SEG_DELAY 0x03E8 /*1seg delay*/
@@ -35,7 +36,7 @@ static CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
 
 static CHADLE_Status CH_create_connection_BLE(void *connect_config, 
                                     uint8_t peer_addrtype, 
-                                    void * peer_addrs);/*handler the general connetion procedure*/
+                                    void * peer_addrs);/*handler the general connection procedure*/
 
 
 static CHADLE_Status CH_set_discovery_BLE(void * dicovery_config);/*handler a general discoverable procedure(ok)*/
@@ -148,7 +149,7 @@ CHADLE_Status CH_create_connection_BLE(void *connect_config,
 
 CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config){/*this is used for receive advertisements called only by limited discoverable devices*/
   
-     return CHADLE_SUCCESS;
+    return CHADLE_SUCCESS; /*Fixme: not yet implemented*/
 }
 
 
@@ -163,7 +164,8 @@ CHADLE_Status CH_set_discovery_specific_BLE(void * dicovery_config){/*this is us
 
 CHADLE_Status CH_set_discovery_limited_BLE(void * dicovery_config){/*this is used for receive advertisements called by an specific client identified by an UUID*/
 
-     return CHADLE_SUCCESS;
+     return CHADLE_SUCCESS; /*Fixme: not yet implemented*/
+
 }
 
 
@@ -207,12 +209,12 @@ CHADLE_Status CH_set_discovery_BLE(void * dicovery_config){/*this is used for re
 
 }
 /**
-  * @brief  This function management the node discovery procedure(specific connection and  discovery for the withlist devices).
+  * @brief  This function management the node discovery procedure(specific connection and  discovery for the with list devices).
   * @param  void * dicovery_config : user configuration (mandatory)
   * @retval APP_Status: Value indicating success or error code.
   */
 
-CHADLE_Status CH_set_selective_discovery_BLE(void * dicovery_config){/*selective discovery procedure usefull in case of multinode*/
+CHADLE_Status CH_set_selective_discovery_BLE(void * dicovery_config){/*selective discovery procedure useful in case of multinode*/
   
 
   tBleStatus ret;
@@ -278,7 +280,7 @@ CHADLE_Status CH_Connection_Complete_BLE(connection_t * connection, uint16_t han
 
 
 /**
-  * @brief  This function fires when a connection event is generated in a device configured as a perispheral.
+  * @brief  This function fires when a connection event is generated in a device configured as a peripheral.
   * @param  connection_t * connection : the connection that generate this event
   * @param  uint16_t handle: connection handler associated.
   * @param  uint16_t handle: central peer device address.
@@ -357,7 +359,7 @@ CHADLE_Status CH_run_advertise_BLE(void){
 }
 
 /**
-  * @brief  This function is fire when a new devices event has been occured.
+  * @brief  This function is fire when a new devices event has been occurred.
   * @param  connection_t * connection: connection that will be associate to this new device
   * @retval CHADLE_Status: Value indicating success or error code.
   */
@@ -386,8 +388,8 @@ CHADLE_Status CH_new_device_found_BLE(connection_t * connection, void * pr){
 /**
   * @brief  This function management the node advertisement procedure called by the central node.
   * @param  void * advertise_conf : user configuration (optional)
-  * @param  uint8_t scanres_data_size :scan respounse datasize (default 0)
-  * @param  void * scanres_data:scan respounse data (default NULL)
+  * @param  uint8_t scanres_data_size :scan response datasize (default 0)
+  * @param  void * scanres_data:scan response data (default NULL)
   * @param  uint8_t serviceuuidlength:service uuid length (default 0)
   * @param  void * serviceuuidlist:service uuid list (default NULL)
   * @retval APP_Status: Value indicating success or error code.
@@ -400,12 +402,12 @@ CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
                                 void * serviceuuidlist){/*server generate advertisements to clients*/
   tBleStatus ret;
   app_advertise_t * user_config;
-/*check for respouse data*/  
+/*check for response data*/
   if(scanres_data==NULL){
     /*not advertisement response data*/
     hci_le_set_scan_resp_data(0,NULL);
   }else{
-    /*set the hci command for scan respouse data in the advertisement event*/
+    /*set the hci command for scan response data in the advertisement event*/
     hci_le_set_scan_resp_data(scanres_data_size,(uint8_t * ) scanres_data);
   }
 
@@ -419,7 +421,7 @@ CHADLE_Status CH_set_advertise_BLE(void * advertise_conf,
    
     
     if(   GET_ROLE(hw_board)!= (GAP_PERIPHERAL_ROLE_IDB04A1 || GAP_BROADCASTER_ROLE_IDB04A1 || GAP_PERIPHERAL_ROLE_IDB05A1 || GAP_BROADCASTER_ROLE_IDB05A1)){
-              PRINTDEBUG("There is no possible to setup the device in adverticement mode if it is not in GAP_PERIPHERAL_ROLE or GAP_BROADCASTER_ROLE please set it in app_ble.h/n");
+              PRINTDEBUG("There is no possible to setup the device in advertisement mode if it is not in GAP_PERIPHERAL_ROLE or GAP_BROADCASTER_ROLE please set it in app_ble.h/n");
          }
     /*uses default configuration*/
       ret = aci_gap_set_discoverable(AV_default_config.adveventtype,

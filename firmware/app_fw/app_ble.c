@@ -1,4 +1,4 @@
-/*suported firmware for BLE app_layer (single node specification)*/
+/*Support firmware for BLE app_layer (single node specification)*/
 /*application management functions*/
 /*global procedures common to any application */
 
@@ -7,7 +7,7 @@
 
 /**********************Local Variables***********************/
 uint16_t service_handle, dev_name_char_handle, appearance_char_handle;
-uint8_t  bnrg_expansion_board =  IDB04A1;
+uint8_t  bnrg_expansion_board =  IDB05A1;
 uint8_t service_list_init=0;            /*!< flag used to initialized the service attribute list */
 
 static int name_size;
@@ -17,8 +17,8 @@ const char * ptr_local_name=NULL;
 /************************************************************/
 tBleStatus(*const  GAP_INIT_FUNC [BLE_ARCH_MASK+1])(uint8_t ,uint8_t ,uint8_t ,uint16_t* ,
                                                     uint16_t* ,uint16_t* ) = { /*architecture independent array, call the correct function according to the architecture version IDB05A1 or IDB04A1*/                                            
-MY_HAVE_IDB0xA1(0, aci_gap_init),                                            
-MY_HAVE_IDB0xA1(1, aci_gap_init)                                                    
+MAY_HAVE_IDB0xA1(0, aci_gap_init),                                            
+MAY_HAVE_IDB0xA1(1, aci_gap_init)                                                    
 }; /*init_gap_macro*/
 
 #define  aci_gap_init(_role,_privacity_enable,_device_name_char_length,_service_handler,\
@@ -54,6 +54,7 @@ int APP_BLE_GET_VERSION(uint8_t *hwVersion, uint16_t *fwVersion){
     *fwVersion |= lmp_pal_subversion & 0xF;               // Patch Version Number
   }
 
+  //HCI_Isr_Event_Handler_CB();
   //HCI_Process(); // To receive the BlueNRG EVT
   HCI_Get_Event_CB();
   HCI_Packet_Release_Event_CB();
@@ -96,10 +97,27 @@ APP_Status APP_Init_BLE(void){/*can be used by any application*/
   APP_BLE_GET_VERSION(&hwVersion, &fwVersion);
    BlueNRG_RST();
    
+ 
     if (hwVersion > 0x30) { 
     bnrg_expansion_board = IDB05A1; 
   	}
 
+#if defined (MULTINODE)  
+    uint8_t mode = 0x03;
+    
+    ret = aci_hal_write_config_data(CONFIG_DATA_MODE_OFFSET,
+                                  0x01,
+                                  &mode);    
+
+        if (ret!= BLE_STATUS_SUCCESS)
+        {
+          return APP_ERROR;
+        }
+    
+#endif  
+    
+    
+    
   ret = aci_hal_write_config_data(CONFIG_DATA_PUBADDR_OFFSET, CONFIG_DATA_PUBADDR_LEN, PTR_DEVICE_BDADDR);
 
 	if (ret != BLE_STATUS_SUCCESS)
@@ -130,15 +148,15 @@ APP_Status APP_Init_BLE(void){/*can be used by any application*/
                                BONDING);
                                
   /* Set output power level */
-  aci_hal_set_tx_power_level(1, 5);
+  aci_hal_set_tx_power_level(1, 7);
   
   return APP_SUCCESS;
 }
 
 /**
   * @brief  This function initialize the profile .
-  * @ This function must be called at the begining of the application.
-  * @param profile datastructure.
+  * @ This function must be called at the beginning of the application.
+  * @param profile data-structure.
   * @retval APP_Status: Value indicating success or error code.
   */
 
@@ -198,17 +216,17 @@ APP_Status APP_add_BLE_Service(app_profile_t * profile, app_service_t * service)
 
 /**
   * @brief  This function is called to add any characteristic.
-  * @param  app_service_t * service: Pointer to a service in which the caracteristic will be included.
-  * @param  service, app_attr_t *attr : Characteristic to inlclude.
+  * @param  app_service_t * service: Pointer to a service in which the characteristic will be included.
+  * @param  service, app_attr_t *attr : Characteristic to include.
   * @retval APP_Status: Value indicating success or error code.
   */
 APP_Status APP_add_BLE_attr(app_service_t * service, app_attr_t *attr){
     tBleStatus ret;
     app_attr_t ** aux_attr_addrs;
-    if(service== NULL || attr == NULL  ) return APP_ERROR; /*it's not acepted input NULL*/
+    if(service== NULL || attr == NULL  ) return APP_ERROR; /*it's not accepted input NULL*/
     
     if(service->attrs==NULL){
-        service->attrs = attr; /*this is the first attrubute associated to this service*/
+        service->attrs = attr; /*this is the first attribute associated to this service*/
     }else if (service->attrs != attr){
       /*if this entry is not already included*/
         aux_attr_addrs = &service->attrs;
@@ -263,9 +281,9 @@ void * APP_get_direct_addrs_BLE(int * size){
 
 
 /**
-  * @brief  This function retreve the services presents in the profile.
+  * @brief  This function retrieve the services presents in the profile.
   * @param app_profile_t * profile: profile which contain the services
-  * @param app_profile_t * service: pointer used to retreve the serivices in the profile
+  * @param app_profile_t * service: pointer used to retrieve the services in the profile
   *                                (If it is NULL the function return the first service from the list of services
                                     If it is different to NULL the function beginning form this input return the next service(if any or NULL) )
   * @retval void * : Return the service pointer as a void pointer..
@@ -289,13 +307,13 @@ void * APP_get_service_BLE(app_profile_t * profile, void  * serv){
 
 
 /**
-  * @brief  This function retreve the characteristics associated to a service.
+  * @brief  This function retrieve the characteristics associated to a service.
   * @param app_service_t * service: service which contain a set of attributes
-  * @param void *attr:              pointer used to retreve the attributes associated to this particular service.
+  * @param void *attr:              pointer used to retrieve the attributes associated to this particular service.
                                     (if it is NULL, return the first attribute associated to this service if any 
-                                     if it is not NULL return then begining from this attribute the function return the next 
+                                     if it is not NULL return then beginning from this attribute the function return the next
                                       attribute in the chain if any).
-  * @retval void *: The function return a void * associated to the attributed retreaved.
+  * @retval void *: The function return a void * associated to the attributed retreated.
   */
 
 void * APP_get_attribute_BLE(app_service_t * service, void *attr){
@@ -312,7 +330,7 @@ void * APP_get_attribute_BLE(app_service_t * service, void *attr){
 
 
 /**
-  * @brief  This function retreve the BLUE-NRG Board's version.
+  * @brief  This function retrieve the BLUE-NRG Board's version.
   * @param void.
   * @retval uint8_t: Value indicating the version of the bluenrg board (IDB04A1=0 or IDB05A1=1).
   */
@@ -321,7 +339,7 @@ return bnrg_expansion_board;
 }
 
 /**
-  * @brief  This function retreve pointer to the device local name .
+  * @brief  This function retrieve pointer to the device local name .
   * @param void.
   * retval: const char *: pointer associated to the local name.
   */

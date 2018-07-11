@@ -6,7 +6,7 @@
 * NOTE:
 * Services and Attributes could be diferent for each node in a multinode topology.
 * This module management those (Services and Attributes) efficiently for each node,
-* this approach allows to create an efficient multinode application since diferent nodes shoud be access 
+* allowing and create an efficient multinode application since diferent nodes shoud be access 
 * to diferent services according to the application requirement. 
 */
 
@@ -47,7 +47,7 @@ num_service = connection->Node_profile->n_service;
 
 	}else{
 		/*all services have been success discovered*/
-		serv_control_flags->services_success_scanned=1;
+		serv_control_flags->services_success_scanned+=1;
 		return SERV_SUCCESS;
 	}
 
@@ -68,7 +68,7 @@ serv_control_flags->services_to_find-=1;
 }
 
 /**
-* @brief  This function is called for discovery a charateristic given its uuid.
+* @brief  This function is called for discovery a characteristic given its uuid.
 * @param  connection_t * connection: contain specific characteristics and services for this connection.
 * @retval SERV_Status: SERV_SUCCESS if operation is success otherwise SERV_ERROR.
 */
@@ -88,7 +88,7 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
     }
     
     if(service==NULL){
-        /*all the characterictics for this profile had been discovery*/
+        /*all the characteristics for this profile had been discovery*/
          connection->Node_profile->svflags.attr_success_scanned=1;
          return SERV_SUCCESS;
     }
@@ -96,15 +96,13 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
     
     /*At this point: its where it'll discovery each characteristic */
     num_char = service->n_attr;
-    attr_control_flags = &service->chrflags;
+    attr_control_flags = &(service->chrflags);
     /*validate that this is the correct characteristic*/
     if( (num_char==0) || (attr_control_flags->char_scanned >= attr_control_flags->char_to_scan)){
-    /*this profile does not have chatacteristics to discover*/
-      connection->Node_profile->svflags.attr_success_scanned=1;
-      attr_control_flags->char_discovery_success=1;
+    /*this profile does not have characteristics to discover*/
       return SERV_SUCCESS;
     }
-    /*retreive the correct charateristic to scan*/
+    /*Retrieve the correct characteristic to scan*/
     charac = service->attrs;
     
     for(i=0; i < attr_control_flags->char_scanned; i++)
@@ -119,12 +117,12 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
     
     
     
-   /*< at this point is possible to send the charactersitic discover request >*/
+   /*< at this point is possible to send the characteristic discover request >*/
     
    ret = aci_gatt_disc_charac_by_uuid(connection->Connection_Handle,
                                       0x0001,
                                       0xFFFF,
-				      charac->charUuidType,
+              charac->charUuidType,
                                       (uint8_t*)&(charac->CharUUID)
                                       ); 
     
@@ -134,12 +132,11 @@ SERV_Status DSCV_primary_char_by_uuid(connection_t * connection)
       return SERV_ERROR;
   }
   
-  attr_control_flags->char_scanned+=1;
+//  attr_control_flags->char_scanned+=1;
+  //service->chrflags.char_to_scan-=1;
   /*a characteristic have been discovered*/ 
   return  SERV_SUCCESS;
-    
 }
-
 
 SERV_Status DSCV_Enable_Notify(connection_t * connection)
 {
@@ -169,14 +166,14 @@ SERV_Status DSCV_Enable_Notify(connection_t * connection)
     /*validate that this is the correct characteristic*/
     
     if( (num_char==0) || (attr_control_flags->char_scanned >= attr_control_flags->char_to_scan)){
-    /*this profile does not have chatacteristics to enable*/
+    /*this profile does not have characteristics to enable*/
       connection->Node_profile->svflags.notify_success_enable=1;
       attr_control_flags->char_notify_enabled_success=1;
       return SERV_SUCCESS;
     }
     
     
-        /*retreive the correct charateristic to anable*/
+        /*Retrieve the correct characteristic to enable*/
     charac = service->attrs;
     attr_control_flags = &service->chrflags;
     
@@ -230,15 +227,16 @@ SERV_Status SH_Associate_att_handler_CB(connection_t * connection,uint16_t peer_
     }
     
         if(service==NULL){
-        /*all the characterictics for this profile had been discovery*/
+        /*all the characteristics for this profile had been discovery*/
         /*then this is not possible verify*/  
          return SERV_SUCCESS;
         }
      
-    /*retreive the correct charateristic to enable*/
+    /*Retrieve the correct characteristic to enable*/
     charac = service->attrs;
     attr_control_flags = &service->chrflags;
-    for(i=0; i < ( attr_control_flags->char_scanned - 1); i++)
+
+    for (i=0; i < attr_control_flags->char_scanned; i++)
     {
       charac = charac->next_attr;
     }
@@ -248,12 +246,76 @@ SERV_Status SH_Associate_att_handler_CB(connection_t * connection,uint16_t peer_
       return SERV_ERROR;
     }
     
-    /*associate this attribute handler to this charactersitic*/
+    /*associate this attribute handler to this characteristic*/
     charac->Associate_CharHandler=peer_attr_handler;
+    attr_control_flags->char_scanned+=1;
+
+    if(attr_control_flags->char_scanned == attr_control_flags->char_to_scan){
+
+      attr_control_flags->char_discovery_success=1;
+    }
     
     return SERV_SUCCESS;
-    
 }
+
+
+SERV_Status SH_Associate_list_att_handler_CB(connection_t * connection, uint8_t data_length, uint8_t * buffer){
+
+   uint8_t i;
+   app_attr_t * charac;
+   app_service_t * service;
+   char_flags * attr_control_flags;
+   
+    /*lets get the correct service*/
+    service = connection->Node_profile->services;
+    
+     while(service!=NULL && service->chrflags.char_discovery_success!=0){
+      service = service->next_service;
+    }
+    
+    if(service==NULL){
+        /*all the characteristics for this profile had been discovery*/
+        /*then this is not possible verify*/  
+         return SERV_SUCCESS;
+        }
+     
+  /*Retrieve the correct characteristic to enable*/
+    charac = service->attrs;
+    attr_control_flags = &service->chrflags;
+    
+  for (i=0; i < attr_control_flags->char_scanned; i++)
+    {
+      charac = charac->next_attr;
+    }
+    
+    if(charac==NULL){
+    /*something is get it wrong*/
+      return SERV_ERROR;
+    }  
+    
+    
+    do{
+      charac->Associate_CharHandler=*buffer||*(buffer+1);
+      buffer+=4;
+      data_length-=4;
+      attr_control_flags->char_scanned+=1;
+      charac=charac->next_attr;
+    }while(charac!=NULL && data_length>0);
+
+
+    if(attr_control_flags->char_scanned == attr_control_flags->char_to_scan){
+      
+      attr_control_flags->char_discovery_success=1;
+    }
+
+
+  return SERV_SUCCESS;  
+                    
+}
+       
+
+
+
 
 /**
 * @brief  This is a control function used in case of service handler error.
